@@ -9,8 +9,8 @@
     "128": "assets/icons/favicon-128.png"
   },
 
-  "description": "This extension helps you debugging your Elm applications by transforming the debug produced by Elm to expandable tree",
-  "homepage_url": "https://github.com/abhijithvijayan/web-extension-starter",
+  "description": "This extension helps you with debugging your Elm applications by transforming the debug produced by Elm to expandable tree",
+  "homepage_url": "https://github.com/kraklin/elm-debug-extension",
   "short_name": "Elm Debug Helper",
 
   "permissions": [

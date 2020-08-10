@@ -7,6 +7,14 @@ body {
   background-color: $greyWhite;
 }
 
+@mixin button(){
+    cursor: pointer;
+    text-decoration: underline;
+    &:hover {
+      color: $skyBlue
+    }
+}
+
 #popup {
   min-width: 350px;
   padding: 30px 20px;
@@ -16,37 +24,12 @@ body {
     text-align: center;
   }
 
-  #options__button {
-    width: 50%;
-    background: green;
-    color: white;
-    font-weight: 500;
-    border-radius: 15px;
-    padding: 5px 10px;
-    justify-content: center;
-    margin: 20px auto;
-    cursor: pointer;
-    opacity: 0.8;
-    display: flex;
+  #packages_button {
+    @include button();
   }
 
-  .links__holder {
-    ul {
-      display: flex;
-      margin-top: 1em;
-      justify-content: space-around;
-
-      li {
-        button {
-          border-radius: 25px;
-          font-size: 20px;
-          font-weight: 600;
-          padding: 10px 17px;
-          background-color: rgba(0, 0, 255, 0.7);
-          color: white;
-          cursor: pointer;
-        }
-      }
-    }
+  #ellie_button {
+    @include button();
+    margin-left: 2em;
   }
 }

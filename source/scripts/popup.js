@@ -1,4 +1,3 @@
-import 'emoji-log';
 import browser from 'webextension-polyfill';
 
 function openWebPage(url) {
@@ -11,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     lastFocusedWindow: true,
   });
 
+  /*
   const url = tabs.length && tabs[0].url;
 
   const response = await browser.runtime.sendMessage({
@@ -20,18 +20,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // eslint-disable-next-line no-console
   console.emoji('🦄', response);
+  */
 
-  document.getElementById('github__button').addEventListener('click', () => {
-    return openWebPage(
-      'https://github.com/abhijithvijayan/web-extension-starter'
-    );
+  document.getElementById('packages_button').addEventListener('click', () => {
+    return openWebPage('https://package.elm-lang.org');
   });
 
-  document.getElementById('donate__button').addEventListener('click', () => {
-    return openWebPage('https://www.buymeacoffee.com/abhijithvijayan');
-  });
-
-  document.getElementById('options__button').addEventListener('click', () => {
-    return openWebPage('options.html');
+  document.getElementById('ellie_button').addEventListener('click', () => {
+    return openWebPage('https://ellie-app.com');
   });
 });
