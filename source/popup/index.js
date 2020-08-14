@@ -1,8 +1,10 @@
 import browser from 'webextension-polyfill';
+import {version} from '../../package.json'
 import {Elm} from './Main.elm';
 
 const app = Elm.Main.init({
   node: document.getElementById('elm-popup'),
+  flags: {version: version}
 });
 
 app.ports.sendRequest.subscribe((request) => {

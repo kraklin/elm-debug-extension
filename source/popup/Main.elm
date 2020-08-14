@@ -18,7 +18,12 @@ import Html.Events as Events
 port sendRequest : Request -> Cmd msg
 
 
-port receive : (Model -> msg) -> Sub msg
+port receive : (DebugOptions -> msg) -> Sub msg
+
+
+type alias Flags =
+    { version : String
+    }
 
 
 type alias DebugOptions =
@@ -27,23 +32,25 @@ type alias DebugOptions =
 
 
 type alias Model =
-    { active : Bool }
+    { options : DebugOptions
+    , flags : Flags
+    }
 
 
 type alias Request =
     { action : String }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( { active = False }
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( { flags = flags, options = { active = False } }
     , sendRequest { action = "GET_STATUS" }
     )
 
 
 type Msg
     = NoOp
-    | NewState Model
+    | UpdateOptions DebugOptions
     | ToggleDebug
 
 
@@ -53,8 +60,8 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        NewState newModel ->
-            ( newModel, Cmd.none )
+        UpdateOptions newOptions ->
+            ( { model | options = newOptions }, Cmd.none )
 
         ToggleDebug ->
             ( model, sendRequest { action = "TOGGLE_ACTIVE" } )
@@ -94,10 +101,22 @@ red =
     Element.rgb255 181 75 59
 
 
+footer : String -> Element Msg
+footer version =
+    Element.row
+        [ Element.width Element.fill
+        , Font.size 10
+        , Font.color grey
+        ]
+        [ Element.el [ Element.alignRight ] (Element.text <| "v" ++ version)
+        ]
+
+
 content : Model -> Element Msg
 content model =
-    Element.column [ Element.width Element.fill, Element.centerX, Element.spacing 30 ]
-        [ activeElement model.active
+    Element.column [ Element.width Element.fill, Element.centerX, Element.spacing 16 ]
+        [ activeElement model.options.active
+        , footer model.flags.version
         ]
 
 
@@ -153,10 +172,10 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    receive NewState
+    receive UpdateOptions
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init

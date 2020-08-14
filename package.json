@@ -1,5 +1,5 @@
 {
-  "name": "elm-debug-helper-extension",
+  "name": "elm-debug-browser-extension",
   "version": "0.0.2",
   "description": "This extension helps you with debugging your Elm applications by transforming the debug produced by Elm to expandable tree",
   "private": true,

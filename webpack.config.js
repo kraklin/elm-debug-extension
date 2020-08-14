@@ -10,6 +10,7 @@ const WextManifestWebpackPlugin = require('wext-manifest-webpack-plugin');
 const FixStyleOnlyEntriesPlugin = require('webpack-fix-style-only-entries');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
+const PACKAGE = require('./package.json');
 const nodeEnv = process.env.NODE_ENV || 'development';
 const targetBrowser = process.env.TARGET_BROWSER;
 
@@ -156,7 +157,7 @@ module.exports = {
         path.join(process.cwd(), `extension/${targetBrowser}`),
         path.join(
           process.cwd(),
-          `extension/${targetBrowser}.${getExtensionFileType(targetBrowser)}`
+          `extension/${PACKAGE.name}-${PACKAGE.version}-${targetBrowser}.${getExtensionFileType(targetBrowser)}`
         ),
       ],
       cleanStaleWebpackAssets: false,
@@ -198,7 +199,7 @@ module.exports = {
       new ZipPlugin({
         path: path.resolve(__dirname, 'extension'),
         extension: `${getExtensionFileType(targetBrowser)}`,
-        filename: `${targetBrowser}`,
+        filename: `${PACKAGE.name}-${PACKAGE.version}-${targetBrowser}`
       }),
     ],
   },
