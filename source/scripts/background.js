@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 
 browser.runtime.onInstalled.addListener(() => {
+  // on installed action - e.g. how to turn on the Custom formatter extension
 });
 
 browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {

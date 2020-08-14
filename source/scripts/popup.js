@@ -4,29 +4,40 @@ function openWebPage(url) {
   return browser.tabs.create({url});
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+function handleError(error) {
+  console.log(`Error: ${error}`);
+}
+
+const setStatus = (status) => {
+  document.getElementById('status').innerHTML = status ? 'ON' : 'OFF'
+};
+
+
+const send = async (request) => {
   const tabs = await browser.tabs.query({
     active: true,
-    lastFocusedWindow: true,
+    currentWindow: true,
   });
+
+  const sending = browser.tabs.sendMessage(tabs[0].id, request);
+
+  sending.then((message) => {
+    setStatus(message.response.opts.active);
+
+  }, handleError);
+}
+
+
+document.addEventListener('DOMContentLoaded', async () => {
+  send({action: 'GET_STATUS'})
 
   /*
-  const url = tabs.length && tabs[0].url;
-
-  const response = await browser.runtime.sendMessage({
-    msg: 'hello',
-    url,
-  });
-
-  // eslint-disable-next-line no-console
-  console.emoji('🦄', response);
-  */
-
   document.getElementById('packages_button').addEventListener('click', () => {
     return openWebPage('https://package.elm-lang.org');
   });
+  */
 
-  document.getElementById('ellie_button').addEventListener('click', () => {
-    return openWebPage('https://ellie-app.com');
+  document.getElementById('toggle_button').addEventListener('click', () => {
+    send({action: 'TOGGLE_ACTIVE'});
   });
 });

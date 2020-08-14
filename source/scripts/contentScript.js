@@ -1,5 +1,6 @@
 /* eslint no-console: "off" */
 import {register} from 'elm-debug-transformer';
+import browser from 'webextension-polyfill';
 
 const injectScript = (func) => {
   // eslint-disable-next-line prefer-template
@@ -18,13 +19,13 @@ injectScript(() => {
       if (!!args && args.length === 1) {
         window.postMessage({type: 'ELM_LOG', message: args[0]});
       } else {
-        old.apply(this, args);
+        old.apply(console, args);
       }
     };
   }
 });
 
-register({limit: 1000000});
+const options = register({active: false, limit: 1000000});
 
 window.addEventListener(
   'message',
@@ -38,3 +39,19 @@ window.addEventListener(
   },
   false
 );
+
+// handle messages for settings
+browser.runtime.onMessage.addListener((request) => {
+  console.log(request);
+
+  switch (request.action) {
+    case 'TOGGLE_ACTIVE':
+      options.active = !options.active;
+      break;
+    default:
+  }
+
+  return new Promise((resolve) => {
+    resolve({response: {opts: options}});
+  });
+});
