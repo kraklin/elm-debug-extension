@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill';
 import {Elm} from './Main.elm';
 
 const app = Elm.Main.init({
-  node: document.getElementById('my-app'),
+  node: document.getElementById('elm-popup'),
 });
 
 app.ports.sendRequest.subscribe((request) => {
@@ -16,11 +16,6 @@ function openWebPage(url) {
 function handleError(error) {
   console.error('Error:', error.message);
 }
-
-const setStatus = (status) => {
-  document.getElementById('status').innerHTML = status ? 'ON' : 'OFF'
-};
-
 
 const send = async (request) => {
   const tabs = await browser.tabs.query({
