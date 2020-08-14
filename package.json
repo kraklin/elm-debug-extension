@@ -28,6 +28,7 @@
     "@babel/runtime": "^7.10.2",
     "advanced-css-reset": "^1.1.1",
     "elm-debug-transformer": "1.1.0-beta",
+    "elm-webpack-loader": "^6.0.1",
     "webext-base-css": "^1.1.0",
     "webextension-polyfill": "^0.6.0"
   },
@@ -47,6 +48,7 @@
     "copy-webpack-plugin": "^5.1.1",
     "cross-env": "^7.0.2",
     "css-loader": "^3.5.3",
+    "elm-hot-webpack-loader": "^1.1.7",
     "eslint": "^6.8.0",
     "eslint-config-airbnb": "^18.1.0",
     "eslint-config-prettier": "^6.11.0",

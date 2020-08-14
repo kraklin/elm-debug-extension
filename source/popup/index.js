@@ -1,11 +1,20 @@
 import browser from 'webextension-polyfill';
+import {Elm} from './Main.elm';
+
+const app = Elm.Main.init({
+  node: document.getElementById('my-app'),
+});
+
+app.ports.sendRequest.subscribe((request) => {
+  send(request);
+}) 
 
 function openWebPage(url) {
   return browser.tabs.create({url});
 }
 
 function handleError(error) {
-  console.log(`Error: ${error}`);
+  console.error('Error:', error.message);
 }
 
 const setStatus = (status) => {
@@ -22,22 +31,6 @@ const send = async (request) => {
   const sending = browser.tabs.sendMessage(tabs[0].id, request);
 
   sending.then((message) => {
-    setStatus(message.response.opts.active);
-
+    app.ports.receive.send(message.opts); 
   }, handleError);
 }
-
-
-document.addEventListener('DOMContentLoaded', async () => {
-  send({action: 'GET_STATUS'})
-
-  /*
-  document.getElementById('packages_button').addEventListener('click', () => {
-    return openWebPage('https://package.elm-lang.org');
-  });
-  */
-
-  document.getElementById('toggle_button').addEventListener('click', () => {
-    send({action: 'TOGGLE_ACTIVE'});
-  });
-});

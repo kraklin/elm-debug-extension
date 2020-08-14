@@ -56,9 +56,9 @@ module.exports = {
     manifest: './source/manifest.json',
     background: './source/scripts/background.js',
     contentScript: './source/scripts/contentScript.js',
-    popup: './source/scripts/popup.js',
+    popup: ['./source/popup/index.js', './source/popup/styles.scss'],
     options: './source/scripts/options.js',
-    styles: ['./source/styles/popup.scss', './source/styles/options.scss'],
+    styles: ['./source/popup/styles.scss', './source/styles/options.scss'],
   },
 
   output: {
@@ -102,8 +102,8 @@ module.exports = {
           {
             loader: 'file-loader',
             options: {
-              name: '[name].css',
-              context: './source/styles/',
+              name: '[path]/[name].css',
+              context: './source/',
               outputPath: 'css/',
             },
           },
@@ -125,6 +125,19 @@ module.exports = {
           'resolve-url-loader',
           'sass-loader',
         ],
+      },
+      {
+        test: /\.elm$/,
+        exclude: [/elm-stuff/, /node_modules/],
+        use: [
+          nodeEnv === 'development' ? 'elm-hot-webpack-loader' : null, 
+          {
+            loader: 'elm-webpack-loader',
+            options: {
+              optimize: nodeEnv === 'production'
+            }
+          }
+        ].filter(x => x),
       },
     ],
   },
@@ -156,7 +169,7 @@ module.exports = {
       filename: 'options.html',
     }),
     new HtmlWebpackPlugin({
-      template: 'source/popup.html',
+      template: 'source/popup/index.html',
       // inject: false,
       chunks: ['popup'],
       filename: 'popup.html',

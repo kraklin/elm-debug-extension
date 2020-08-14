@@ -52,6 +52,6 @@ browser.runtime.onMessage.addListener((request) => {
   }
 
   return new Promise((resolve) => {
-    resolve({response: {opts: options}});
+    resolve({opts: options});
   });
 });
