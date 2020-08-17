@@ -3,10 +3,10 @@
   "name": "Elm Debug Helper",
   "version": "0.0.2",
   "icons": {
-    "16": "assets/icons/favicon-16.png",
-    "32": "assets/icons/favicon-32.png",
-    "48": "assets/icons/favicon-48.png",
-    "128": "assets/icons/favicon-128.png"
+    "16": "assets/icons/favicon-dark-16.png",
+    "32": "assets/icons/favicon-dark-32.png",
+    "96": "assets/icons/favicon-dark-96.png",
+    "128": "assets/icons/favicon-dark-128.png"
   },
 
   "description": "This extension helps you with debugging your Elm applications by transforming the debug produced by Elm to expandable tree",
@@ -24,14 +24,14 @@
   "__prod__content_security_policy": "script-src 'self'; object-src 'self'",
 
 
-  "__chrome|firefox__author": "abhijithvijayan",
+  "__chrome|firefox__author": "Tomas Latal",
   "__opera__developer": {
-    "name": "abhijithvijayan"
+    "name": "Tomas Latal"
   },
 
   "__firefox__applications": {
     "gecko": {
-      "id": "{754FB1AD-CC3B-4856-B6A0-7786F8CA9D17}"
+      "id": "{9e6bdd58-4473-c842-9a25-a2248e1365b4}"
     }
   },
 
@@ -41,10 +41,10 @@
   "browser_action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "assets/icons/favicon-16.png",
-      "32": "assets/icons/favicon-32.png",
-      "48": "assets/icons/favicon-48.png",
-      "128": "assets/icons/favicon-128.png"
+      "16": "assets/icons/favicon-dark-16.png",
+      "32": "assets/icons/favicon-dark-32.png",
+      "96": "assets/icons/favicon-dark-96.png",
+      "128": "assets/icons/favicon-dark-128.png"
     },
     "default_title": "Elm Debug Helper",
     "__chrome|opera__chrome_style": false,
