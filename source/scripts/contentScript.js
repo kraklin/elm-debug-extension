@@ -8,9 +8,12 @@ const storageKey = urlToKey(location.href);
 // try to get stored configuration for current tab 
 browser.storage.sync.get(storageKey).then((result) => {
 
+  const savedOptions = result[storageKey];
+
   // ------- SCRIPT INJECTION -------------
 
-  const injectScript = (func) => {
+  let scriptInjected = false;
+  const addScriptToPage = (func) => {
     // eslint-disable-next-line prefer-template
     const actualCode = '(' + func + ')();';
 
@@ -20,29 +23,37 @@ browser.storage.sync.get(storageKey).then((result) => {
     script.remove();
   };
 
-  injectScript(() => {
-    if (window.console && console.log) {
-      const old = console.log;
-      console.log = (...args) => {
-        if (!!args && args.length === 1) {
-          window.postMessage({type: 'ELM_LOG', message: args[0]});
-        } else {
-          old.apply(console, args);
+  const injectScript = () => {
+      addScriptToPage(() => {
+        if (window.console && console.log) {
+          const old = console.log;
+          console.log = (...args) => {
+            if (!!args && args.length === 1) {
+              window.postMessage({type: 'ELM_LOG', message: args[0]});
+            } else {
+              old.apply(console, args);
+            }
+          };
         }
-      };
-    }
-  });
+      });
+
+      scriptInjected = true;
+  }
 
   // -------- ELM-DEBUG-TRANSFORM SETTINGS ------------
 
-  const savedOptions = result[storageKey];
-  let optionsValues = {active: false, limit: 10000000}
+  let options = {active: false, limit: 10000000}
 
   if(savedOptions !== undefined) {
-    optionsValues = {active: savedOptions.active}
+    options = {active: savedOptions.active}
   }
 
-  const options = register(optionsValues);
+  const checkInjectAndRegister = () => {
+    if(options.active && !scriptInjected){
+      injectScript();
+      options = register(options);
+    }
+  }
 
   const saveToStorage = (optionsToSave) => {
     browser.storage.sync.set({[storageKey]: optionsToSave});
@@ -53,7 +64,10 @@ browser.storage.sync.get(storageKey).then((result) => {
   }
 
   // set initial icon
-  setIcon(optionsValues.active);
+  setIcon(options.active);
+  
+  // check if you can inject the console.log catcher
+  checkInjectAndRegister();
 
   // ---------- MESSAGE HANDLING ------------
 
@@ -75,8 +89,11 @@ browser.storage.sync.get(storageKey).then((result) => {
     switch (request.action) {
       case 'TOGGLE_ACTIVE':
         options.active = !options.active;
+
+        checkInjectAndRegister();
         setIcon(options.active);
         saveToStorage({active: options.active});
+
         break;
       default:
     }
