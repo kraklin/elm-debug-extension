@@ -1,17 +1,21 @@
 import browser from 'webextension-polyfill';
 import {version} from '../../package.json'
-import {Elm} from './Main.elm';
+import {Elm} from './Popup.elm';
 
 browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
   const currentTab = tabs[0];
 
-  const app = Elm.Main.init({
+  const app = Elm.Popup.init({
     node: document.getElementById('elm-popup'),
     flags: {version: version}
   });
 
   app.ports.sendRequest.subscribe((request) => {
     send(request);
+  }) 
+
+  app.ports.openOptionsPage.subscribe(() => {
+    browser.runtime.openOptionsPage();
   }) 
 
   function openWebPage(url) {

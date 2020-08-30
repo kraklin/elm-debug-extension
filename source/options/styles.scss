@@ -1,0 +1,8 @@
+@import "../styles/base/fonts";
+@import "../styles/base/reset";
+@import "../styles/base/variables";
+
+body {
+  color: $black;
+  background-color: $greyWhite;
+}

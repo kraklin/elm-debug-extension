@@ -1,4 +1,4 @@
-port module Main exposing (..)
+port module Popup exposing (..)
 
 import Browser
 import Element exposing (Element)
@@ -16,6 +16,9 @@ import Html.Events as Events
 
 
 port sendRequest : Request -> Cmd msg
+
+
+port openOptionsPage : () -> Cmd msg
 
 
 port receive : (DebugOptions -> msg) -> Sub msg
@@ -51,6 +54,7 @@ init flags =
 type Msg
     = NoOp
     | UpdateOptions DebugOptions
+    | OpenOptionsPage
     | ToggleDebug
 
 
@@ -65,6 +69,9 @@ update msg model =
 
         ToggleDebug ->
             ( model, sendRequest { action = "TOGGLE_ACTIVE" } )
+
+        OpenOptionsPage ->
+            ( model, openOptionsPage () )
 
 
 
@@ -108,7 +115,8 @@ footer version =
         , Font.size 10
         , Font.color grey
         ]
-        [ Element.el [ Element.alignRight ] (Element.text <| "v" ++ version)
+        [ Input.button [ Element.alignLeft ] { label = Element.text "Options", onPress = Just OpenOptionsPage }
+        , Element.el [ Element.alignRight ] (Element.text <| "v" ++ version)
         ]
 
 

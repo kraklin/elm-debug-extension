@@ -3,12 +3,18 @@ import {register} from 'elm-debug-transformer';
 import browser from 'webextension-polyfill';
 import {urlToKey} from './helpers.js'
 
+const globalStorageKey = "globalOptions";
 const storageKey = urlToKey(location.href);
 
 // try to get stored configuration for current tab 
-browser.storage.sync.get(storageKey).then((result) => {
-
+browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
   const savedOptions = result[storageKey];
+  let globalOptions = result[globalStorageKey];
+
+  if (globalOptions === undefined) {
+    globalOptions = {limit: 10000000, debug: false, simple_mode: true}
+    browser.storage.sync.set({[globalStorageKey]: globalOptions});
+  }
 
   // ------- SCRIPT INJECTION -------------
 
@@ -42,11 +48,25 @@ browser.storage.sync.get(storageKey).then((result) => {
 
   // -------- ELM-DEBUG-TRANSFORM SETTINGS ------------
 
-  let options = {active: false, limit: 10000000}
+  let options = {
+    active: false,
+     limit: globalOptions.limit,
+     debug: globalOptions.debug,
+     simple_mode: globalOptions.simple_mode,
+  }
 
   if(savedOptions !== undefined) {
-    options = {active: savedOptions.active}
+    options.active = savedOptions.active;
   }
+
+  browser.storage.onChanged.addListener((changes, area)=>{
+    if (changes[globalStorageKey] !== undefined) {
+         options.limit= changes[globalStorageKey].newValue.limit;
+         options.debug= changes[globalStorageKey].newValue.debug;
+         options.simple_mode= changes[globalStorageKey].newValue.simple_mode;
+    }
+  });
+
 
   const checkInjectAndRegister = () => {
     if(options.active && !scriptInjected){

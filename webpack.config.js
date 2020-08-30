@@ -58,7 +58,7 @@ module.exports = {
     background: './source/scripts/background.js',
     contentScript: './source/scripts/contentScript.js',
     popup: ['./source/popup/index.js', './source/popup/styles.scss'],
-    options: './source/scripts/options.js',
+    options: ['./source/options/index.js', './source/options/styles.scss'],
     styles: ['./source/popup/styles.scss', './source/styles/options.scss'],
   },
 
@@ -164,7 +164,7 @@ module.exports = {
       verbose: true,
     }),
     new HtmlWebpackPlugin({
-      template: 'source/options.html',
+      template: 'source/options/index.html',
       // inject: false,
       chunks: ['options'],
       filename: 'options.html',
