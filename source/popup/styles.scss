@@ -1,35 +1,10 @@
-@import "../styles/base/fonts";
-@import "../styles/base/reset";
+@import "../styles/base/_fonts";
 @import "../styles/base/variables";
 
 body {
   color: $black;
   background-color: $greyWhite;
+  padding: 0;
+  margin: 0;
 }
 
-@mixin button(){
-    cursor: pointer;
-    text-decoration: underline;
-    &:hover {
-      color: $skyBlue
-    }
-}
-
-#popup {
-  min-width: 350px;
-  padding: 30px 20px;
-
-  h2 {
-    font-size: 25px;
-    text-align: center;
-  }
-
-  #packages_button {
-    @include button();
-  }
-
-  #ellie_button {
-    @include button();
-    margin-left: 2em;
-  }
-}

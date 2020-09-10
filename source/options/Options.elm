@@ -235,13 +235,13 @@ header version =
         ]
         [ Element.image
             [ Element.width <| Element.px 24 ]
-            { description = "Elm Debug Helper Logo", src = "/assets/elm-logo.png" }
+            { description = "Elm Debug Extension Logo", src = "/assets/elm-logo.png" }
         , Element.el
             [ Font.size 20
             , Font.medium
             , Font.color dark
             ]
-            (Element.text "Elm Debug Helper")
+            (Element.text "Elm Debug Extension")
         , Element.el
             [ Font.size 20
             , Font.hairline
@@ -303,7 +303,7 @@ parserLimitSettings errors limitValue =
                 ]
 
         help =
-            Element.column [ Element.width Element.fill ]
+            Element.column [ Element.width Element.fill, Element.spacing 12 ]
                 [ Element.paragraph [ Font.size 12, Font.color grey ]
                     [ Element.text "Large messages takes longer to be parsed. But in some cases you need them anyway." ]
                 , Element.paragraph [ Font.size 12, Font.color grey ]
@@ -356,7 +356,7 @@ simpleModeSettings simpleMode =
             Element.column [ Element.width Element.fill, Element.spacing 12 ]
                 [ Element.paragraph [ Font.size 12, Font.color grey ]
                     [ Element.text "Chromium based browsers have ability to use custom formats in console. This option can turn this kind of formatting on." ]
-                , Element.paragraph [ Font.size 12, Font.color grey ]
+                , Element.paragraph [ Font.size 12, Font.color dark, Font.bold ]
                     [ Element.text "There is an extra step you need to do to enable custom formatting in console." ]
                 , Element.paragraph [ Font.size 12, Font.color grey ]
                     [ Element.text "Open your Developers console > hit F1 > in Preferences navigate to Console > turn on option Enable custom formatters." ]
@@ -419,7 +419,7 @@ saveButton savedResult =
                 Element.none
 
             SavedOk ->
-                Element.el [ Font.color green, Element.alignRight ] <| Element.text "Options has been saved successfuly"
+                Element.el [ Font.color green, Element.alignRight ] <| Element.text "Setting has been saved successfuly"
 
             SavedError err ->
                 Element.el [ Font.color red, Element.alignRight ] <| Element.text <| "Error: " ++ err
