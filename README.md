@@ -5,10 +5,9 @@
     <img src="https://img.shields.io/github/kraklin/elm-debug-extension.svg" alt="LICENSE" />
   </a>
 </div>
-<h3 align="center">🙋‍♂️ Made by <a href="https://twitter.com/tomaslatal">@tomaslatal</a></h3>
+<p align="center">❤️  Love it? ⭐️ Star it on [GitHub](https://github.com/kraklin/elm-debug-extension/stargazers)</p>
 <hr />
 
-❤️  Love it? ⭐️ Star it on [GitHub](https://github.com/kraklin/elm-debug-extension/stargazers) 
 ## Features
 
 - Transforms Debug.log string from Elm into collapsible object in browser console
