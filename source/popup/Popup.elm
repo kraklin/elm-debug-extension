@@ -78,7 +78,7 @@ update msg model =
             ( model, openOptionsPage () )
 
         OpenFeedbackForm ->
-            ( model, openPage "https://google.com" )
+            ( model, openPage "https://forms.gle/DaUmAMj8PVTc6zpa6" )
 
 
 
@@ -197,7 +197,7 @@ footer version =
         , HtmlStyled.div
             [ css
                 [ Css.flex (int 1)
-                , Css.fontSize (px 8)
+                , Css.fontSize (px 9)
                 , Css.margin2 (px 0) (px 12)
                 , Css.color (Css.hex "5A6378")
                 , Css.alignSelf Css.center
@@ -230,7 +230,7 @@ content model =
     HtmlStyled.div
         [ css
             [ Css.width (px 300)
-            , Css.fontFamilies [ "Open Sans" ]
+            , Css.fontFamilies [ "IBM Plex Sans" ]
             ]
         ]
         [ header

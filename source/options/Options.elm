@@ -220,6 +220,11 @@ grey =
     Element.rgb255 128 128 128
 
 
+lightGrey : Element.Color
+lightGrey =
+    Element.rgb255 220 220 220
+
+
 red : Element.Color
 red =
     Element.rgb255 181 75 59
@@ -241,27 +246,34 @@ header version =
             , Font.medium
             , Font.color dark
             ]
-            (Element.text "Elm Debug Extension")
+            (Element.text <| String.toUpper "Elm Debug Extension")
         , Element.el
             [ Font.size 20
-            , Font.hairline
+            , Font.regular
             , Font.color dark
             , Element.alignRight
             ]
-            (Element.text "Options")
+            (Element.text <| String.toUpper "Settings")
         ]
 
 
 section : String -> Element Msg -> Element Msg -> Element Msg
 section name sectionContent help =
-    Element.row [ Element.width Element.fill, Element.spacing 20 ]
+    Element.row
+        [ Background.color light
+        , Element.padding 20
+        , Element.width Element.fill
+        , Element.spacing 4
+        , Border.rounded 8
+        , Border.shadow { offset = ( 0, 2 ), size = 2, blur = 4, color = lightGrey }
+        ]
         [ Element.column [ Element.width Element.fill, Element.spacing 20 ]
             [ Element.el
-                [ Font.size 20
-                , Font.hairline
+                [ Font.size 18
+                , Font.regular
                 , Font.color blue
                 ]
-                (Element.text name)
+                (Element.text <| String.toUpper name)
             , Element.row
                 [ Element.width Element.fill
                 , Element.spacing 20
@@ -313,7 +325,7 @@ parserLimitSettings errors limitValue =
                     ]
                 ]
     in
-    section "ParserLimit" limitForm help
+    section "Parser limit" limitForm help
 
 
 simpleModeSettings : Mode -> Element Msg
@@ -371,7 +383,7 @@ debugModeSettings debugTurnedOn =
         checkbox value =
             if value then
                 Input.button
-                    [ Element.padding 4
+                    [ Element.padding 2
                     , Element.width <| Element.px 20
                     , Element.height <| Element.px 20
                     , Border.color dark
@@ -439,7 +451,7 @@ content model =
     in
     Element.el [ Element.width Element.fill ] <|
         Element.column
-            [ Element.width <| Element.maximum 900 Element.fill
+            [ Element.width <| Element.maximum 700 Element.fill
             , Element.centerX
             , Element.spacing 16
             ]
@@ -460,6 +472,10 @@ view model =
     Element.layout
         [ Element.width Element.fill
         , Element.padding 12
+        , Font.family
+            [ Font.typeface "IBM Plex Sans"
+            , Font.sansSerif
+            ]
         , Font.size 14
         , Font.color dark
         ]
