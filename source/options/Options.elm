@@ -37,7 +37,7 @@ type alias GlobalOptions =
 
 type Mode
     = Simple
-    | CustomFormatters
+    | EnhancedFormatters
 
 
 type alias Form =
@@ -71,7 +71,7 @@ modeDecoder =
                 Simple ->
                     Ok True
 
-                CustomFormatters ->
+                EnhancedFormatters ->
                     Ok False
 
 
@@ -92,7 +92,7 @@ optionsToForm { limit, simple_mode, debug } =
             Simple
 
         else
-            CustomFormatters
+            EnhancedFormatters
     }
 
 
@@ -355,11 +355,11 @@ simpleModeSettings simpleMode =
 
         simpleSettingsForm =
             Input.radioRow [ Element.width Element.fill, Element.spacing 20 ]
-                { label = Input.labelHidden "Select simple mode or custom formatter mode"
+                { label = Input.labelHidden "Select simple mode or enhanced formatter mode"
                 , onChange = SetSimpleMode
                 , options =
                     [ option Simple "simple"
-                    , option CustomFormatters "custom formatter"
+                    , option EnhancedFormatters "enhanced formatter"
                     ]
                 , selected = Just simpleMode
                 }
@@ -367,9 +367,9 @@ simpleModeSettings simpleMode =
         help =
             Element.column [ Element.width Element.fill, Element.spacing 12 ]
                 [ Element.paragraph [ Font.size 12, Font.color grey ]
-                    [ Element.text "Chromium based browsers have ability to use custom formats in console. This option can turn this kind of formatting on." ]
+                    [ Element.text "Chromium based browsers have ability to use enhanced formats in console. This option can turn this kind of formatting on." ]
                 , Element.paragraph [ Font.size 12, Font.color dark, Font.bold ]
-                    [ Element.text "There is an extra step you need to do to enable custom formatting in console." ]
+                    [ Element.text "There is an extra step you need to do to enable enhanced formatting in console." ]
                 , Element.paragraph [ Font.size 12, Font.color grey ]
                     [ Element.text "Open your Developers console > hit F1 > in Preferences navigate to Console > turn on option Enable custom formatters." ]
                 ]
