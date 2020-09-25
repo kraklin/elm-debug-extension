@@ -6,7 +6,7 @@ import {urlToKey} from './helpers.js'
 const globalStorageKey = "globalOptions";
 const storageKey = urlToKey(location.href);
 
-// try to get stored configuration for current tab 
+// try to get stored configuration for current tab
 browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
   const savedOptions = result[storageKey];
   let globalOptions = result[globalStorageKey];
@@ -85,7 +85,7 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
 
   // set initial icon
   setIcon(options.active);
-  
+
   // check if you can inject the console.log catcher
   checkInjectAndRegister();
 
