@@ -23,7 +23,7 @@ const extensionReloaderPlugin =
           // TODO: reload manifest on update
           contentScript: 'contentScript',
           background: 'background',
-          extensionPage: ['popup', 'options'],
+          extensionPage: ['popup', 'options','devtools'],
         },
       })
     : () => {
@@ -58,6 +58,8 @@ module.exports = {
     background: './source/scripts/background.js',
     contentScript: './source/scripts/contentScript.js',
     popup: ['./source/popup/index.js', './source/popup/styles.scss'],
+    devtools: ['./source/devtools/devtools.js' ],
+    devtoolsPanel: ['./source/devtools/index.js' ],
     options: ['./source/options/index.js', './source/options/styles.scss'],
     styles: ['./source/popup/styles.scss', './source/styles/options.scss'],
   },
@@ -131,7 +133,7 @@ module.exports = {
         test: /\.elm$/,
         exclude: [/elm-stuff/, /node_modules/],
         use: [
-          nodeEnv === 'development' ? 'elm-hot-webpack-loader' : null, 
+          nodeEnv === 'development' ? 'elm-hot-webpack-loader' : null,
           {
             loader: 'elm-webpack-loader',
             options: {
@@ -166,6 +168,18 @@ module.exports = {
       ],
       cleanStaleWebpackAssets: false,
       verbose: true,
+    }),
+    new HtmlWebpackPlugin({
+      template: 'source/devtools/devtools-page.html',
+      // inject: false,
+      chunks: ['devtools'],
+      filename: 'devtools-page.html',
+    }),
+    new HtmlWebpackPlugin({
+      template: 'source/devtools/panel.html',
+      // inject: false,
+      chunks: ['devtoolsPanel'],
+      filename: 'devtools.html',
     }),
     new HtmlWebpackPlugin({
       template: 'source/options/index.html',
