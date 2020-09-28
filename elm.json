@@ -2,6 +2,7 @@
     "type": "application",
     "source-directories": [
         "source/popup",
+        "source/devtools",
         "source/options"
     ],
     "elm-version": "0.19.1",

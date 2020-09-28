@@ -25,6 +25,16 @@ const setIcon = (tabId, isActive) => {
   });
 }
 
+// handle on connect
+
+let ports = {}
+
+browser.runtime.onConnect.addListener((port)=>{
+  if(!!port.name){
+    ports[port.name] = port;
+  }
+});
+
 browser.runtime.onInstalled.addListener(() => {
   // on installed action - e.g. how to turn on the Custom formatter extension
 });
@@ -32,6 +42,12 @@ browser.runtime.onInstalled.addListener(() => {
 browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {
   // Do something with the message!
   // alert(request.url);
+  if(_request.action === "ELM_LOG"){
+    const senderId = _sender.tab.id+'';
+    if(ports[senderId]){
+      ports[senderId].postMessage(_request.data);
+    }
+  }
 
   // And respond back to the sender.
   if(_request.action === "SET_ICON"){

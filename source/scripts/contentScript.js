@@ -36,9 +36,8 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
           console.log = (...args) => {
             if (!!args && args.length === 1) {
               window.postMessage({type: 'ELM_LOG', message: args[0]});
-            } else {
-              old.apply(console, args);
             }
+            old.apply(console, args);
           };
         }
       });
@@ -69,9 +68,9 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
 
 
   const checkInjectAndRegister = () => {
-    if(options.active && !scriptInjected){
+    if(!scriptInjected){
       injectScript();
-      options = register(options);
+      //options = register(options);
     }
   }
 
@@ -98,7 +97,7 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
       if (event.source !== window) return;
 
       if (event.data.type && event.data.type === 'ELM_LOG') {
-        console.log(event.data.message);
+        browser.runtime.sendMessage({ action: "ELM_LOG",  data: event.data.message});
       }
     },
     false
