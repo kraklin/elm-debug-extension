@@ -5,7 +5,7 @@
     <img src="https://img.shields.io/github/kraklin/elm-debug-extension.svg" alt="LICENSE" />
   </a>
 </div>
-<p align="center">❤️  Love it? ⭐️ Star it on <a href="https://github.com/kraklin/elm-debug-extension/stargazers">GitHub</a></p>
+<p align="center">❤️  Love it? ⭐️ <a href="https://github.com/kraklin/elm-debug-extension/stargazers">Star it</a>.</p>
 <hr />
 
 ## Features
