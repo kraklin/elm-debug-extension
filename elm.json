@@ -15,6 +15,7 @@
             "elm/svg": "1.0.1",
             "krisajenkins/remotedata": "6.0.1",
             "mdgriffith/elm-ui": "1.1.8",
+            "robinheghan/murmur3": "1.0.0",
             "rtfeldman/elm-css": "16.0.2"
         },
         "indirect": {
