@@ -2,7 +2,7 @@
 <p align="center">Browser extension, that is making your elm Debug.log output much easier to work with.</p>
 <div align="center">
   <a href="https://github.com/kraklin/elm-debug-extension/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/kraklin/elm-debug-extension.svg" alt="LICENSE" />
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="LICENSE" />
   </a>
 </div>
 <p align="center">❤️  Love it? ⭐️ <a href="https://github.com/kraklin/elm-debug-extension/stargazers">Star it</a>.</p>
