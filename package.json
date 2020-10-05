@@ -1,6 +1,6 @@
 {
   "name": "elm-debug-browser-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "This extension helps you with debugging your Elm applications by transforming the debug produced by Elm to expandable tree",
   "private": true,
   "license": "MIT",
@@ -27,7 +27,7 @@
   "dependencies": {
     "@babel/runtime": "^7.10.2",
     "advanced-css-reset": "^1.1.1",
-    "elm-debug-transformer": "1.1.1-beta",
+    "elm-debug-transformer": "1.1.1",
     "elm-webpack-loader": "^6.0.1",
     "webext-base-css": "^1.1.0",
     "webextension-polyfill": "^0.6.0"

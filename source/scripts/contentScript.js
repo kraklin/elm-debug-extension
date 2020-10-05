@@ -94,8 +94,11 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
   window.addEventListener(
     'message',
     (event) => {
-      // We only accept messages from ourselves
-      if (event.source !== window) return;
+      // We only accept messages from ourselves or from Ellie
+      if (event.origin === "https://ellie-app.com" && event.data.tag === "LogReceived") {
+        console.log(event.data.contents.label + ": " + event.data.contents.body)
+      }
+      else if (event.source !== window) return;
 
       if (event.data.type && event.data.type === 'ELM_LOG') {
         console.log(event.data.message);

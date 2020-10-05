@@ -3257,10 +3257,10 @@ elliptic@^6.0.0, elliptic@^6.5.2:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
 
-elm-debug-transformer@1.1.1-beta:
-  version "1.1.1-beta"
-  resolved "https://registry.yarnpkg.com/elm-debug-transformer/-/elm-debug-transformer-1.1.1-beta.tgz#81b8f9d84be7f27dd385ce667d1b6f9ed12e3f9c"
-  integrity sha512-/H37o24OptCtOrE6Jdt8fhWrvAvjMb3xpekpQk7qtYiq/EywoPy3qmLG/d27YniqhoqCUIbUqcDRvkOKYgWWPA==
+elm-debug-transformer@1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/elm-debug-transformer/-/elm-debug-transformer-1.1.1.tgz#29c6dcf2ad6fe72acc2539ddc28794c333207600"
+  integrity sha512-/dU5zMNOPEtbLemQ0JyE7TI1Wv64fO8nD+Rf8mN6ecCoIikklOkw8bOpEBxRu62OjAWuoSs8tfDNHHevuTYTlQ==
 
 elm-hot-webpack-loader@^1.1.7:
   version "1.1.7"
