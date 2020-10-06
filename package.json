@@ -27,7 +27,7 @@
   "dependencies": {
     "@babel/runtime": "^7.10.2",
     "advanced-css-reset": "^1.1.1",
-    "elm-debug-transformer": "1.1.1-beta",
+    "elm-debug-transformer": "1.1.2",
     "elm-webpack-loader": "^6.0.1",
     "webext-base-css": "^1.1.0",
     "webextension-polyfill": "^0.6.0"
