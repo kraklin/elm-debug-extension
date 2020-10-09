@@ -138,7 +138,7 @@ module.exports = {
             loader: 'elm-webpack-loader',
             options: {
               optimize: nodeEnv === 'production',
-              debug: true
+              debug: nodeEnv === 'development',
 
             }
           }

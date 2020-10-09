@@ -40,6 +40,8 @@ browser.runtime.onInstalled.addListener(() => {
 });
 
 browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {
+  console.log("request", _request);
+
   // Do something with the message!
   // alert(request.url);
   if(_request.action === "ELM_LOG"){
@@ -55,4 +57,14 @@ browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {
   }
 
   return;// Promise.resolve('got your message, thanks!');
+});
+
+// handle page reload
+browser.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+   if (changeInfo.status == 'complete') {
+     const senderId = tabId+'';
+     if(ports[senderId]){
+       ports[senderId].postMessage("reloaded");
+     }
+   }
 });

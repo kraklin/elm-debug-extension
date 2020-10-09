@@ -1,12 +1,20 @@
-port module Panel exposing (..)
+port module Panel exposing (main)
 
 import Browser
 import Html exposing (Html)
 import Html.Events as Events
+import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode.Extra as Decode
 import Murmur3
 
 
 port logReceived : (String -> msg) -> Sub msg
+
+
+port parse : ( Int, String ) -> Cmd msg
+
+
+port parsedReceived : (Value -> msg) -> Sub msg
 
 
 type alias Flags =
@@ -25,13 +33,35 @@ type alias Model =
     }
 
 
+type alias DecodedLog =
+    { log : String, hash : Int }
+
+
 type Msg
     = LogReceived String
     | Clear
+    | ParsedReceived Value
+
+
+debugDecoder : Decoder String
+debugDecoder =
+    Decode.field "name" Decode.string
+
+
+logDecoder : Decoder DecodedLog
+logDecoder =
+    Decode.succeed DecodedLog
+        |> Decode.andMap (Decode.field "log" debugDecoder)
+        |> Decode.andMap (Decode.field "hash" Decode.int)
+
+
+decodeParsedValue : Value -> Result Decode.Error DecodedLog
+decodeParsedValue value =
+    Decode.decodeValue logDecoder value
 
 
 init : Flags -> ( Model, Cmd Msg )
-init flags =
+init _ =
     ( { messages = [] }, Cmd.none )
 
 
@@ -60,14 +90,14 @@ update msg model =
                 hash =
                     messageHash log
 
-                messages =
+                ( messages, cmd ) =
                     if lastHash == Just hash then
-                        incrementLastMessageCount model.messages
+                        ( incrementLastMessageCount model.messages, Cmd.none )
 
                     else
-                        { count = 1, message = log, hash = hash } :: model.messages
+                        ( model.messages, parse ( hash, log ) )
             in
-            ( { model | messages = messages }, Cmd.none )
+            ( { model | messages = messages }, cmd )
 
         Clear ->
             ( { messages = []
@@ -75,10 +105,28 @@ update msg model =
             , Cmd.none
             )
 
+        ParsedReceived value ->
+            let
+                decodedValue =
+                    decodeParsedValue value
+
+                messages =
+                    case decodedValue of
+                        Ok { hash, log } ->
+                            { count = 1, message = log, hash = hash } :: model.messages
+
+                        Err e ->
+                            model.messages
+            in
+            ( { model | messages = messages }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    logReceived LogReceived
+subscriptions _ =
+    Sub.batch
+        [ logReceived LogReceived
+        , parsedReceived ParsedReceived
+        ]
 
 
 view : Model -> Html Msg
