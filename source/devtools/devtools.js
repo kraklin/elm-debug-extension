@@ -41,8 +41,6 @@ browser.devtools.panels.create(
   hijackConsole();
 });
 
-browser.devtools.inspectedWindow.addEventListener();
-
 const myPort = browser.runtime.connect({name: ''+browser.devtools.inspectedWindow.tabId});
 
 myPort.onMessage.addListener((message) => {
