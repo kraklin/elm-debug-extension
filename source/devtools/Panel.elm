@@ -1,11 +1,11 @@
 port module Panel exposing (main)
 
 import Browser
-import Decode exposing (DecodedLog, ElmValue)
+import Expandable exposing (ElmValue)
 import Html exposing (Html)
 import Html.Events as Events
-import Json.Decode as Decode exposing (Decoder, Value)
-import Json.Decode.Extra as Decode
+import Html.Events.Extra as Events
+import Json.Decode exposing (Value)
 import Murmur3
 
 
@@ -39,6 +39,7 @@ type Msg
     = LogReceived String
     | Clear
     | ParsedReceived Value
+    | Toggle Expandable.Key
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -51,6 +52,7 @@ messageHash input =
     Murmur3.hashString 1234 input
 
 
+incrementLastMessageCount : List DebugMessage -> List DebugMessage
 incrementLastMessageCount messages =
     case messages of
         [] ->
@@ -89,7 +91,7 @@ update msg model =
         ParsedReceived parsedValue ->
             let
                 decodedValue =
-                    Decode.decodeParsedValue parsedValue
+                    Expandable.decodeParsedValue parsedValue
 
                 messages =
                     case decodedValue of
@@ -101,6 +103,21 @@ update msg model =
             in
             ( { model | messages = messages }, Cmd.none )
 
+        Toggle path ->
+            let
+                updatedMessages =
+                    case model.messages of
+                        [] ->
+                            []
+
+                        m :: rest ->
+                            { m | value = updatedElmValue m.value } :: rest
+
+                updatedElmValue val =
+                    Expandable.map path Expandable.toggle val
+            in
+            ( { model | messages = updatedMessages }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -110,87 +127,17 @@ subscriptions _ =
         ]
 
 
-viewValue value =
-    case value of
-        Decode.ElmString str ->
-            Html.text str
-
-        Decode.ElmFloat float ->
-            Html.text <| String.fromFloat float ++ "f"
-
-        Decode.ElmInt int ->
-            Html.text <| String.fromInt int
-
-        Decode.ElmSequence seqType children ->
-            let
-                typeToString =
-                    case seqType of
-                        Decode.Tuple ->
-                            "(T)"
-
-                        Decode.Set ->
-                            "(S)"
-
-                        Decode.List ->
-                            "(L)"
-
-                        Decode.Array ->
-                            "(A)"
-            in
-            Html.ul [] <| Html.text typeToString :: List.map (\c -> Html.li [] [ viewValue c ]) children
-
-        Decode.ElmBool bool ->
-            Html.text <|
-                if bool then
-                    "True"
-
-                else
-                    "False"
-
-        Decode.ElmRecord recordValues ->
-            Html.ul [] <|
-                List.map (\( key, child ) -> Html.li [] [ Html.text (key ++ ": "), viewValue child ]) recordValues
-
-        Decode.ElmDict dictValues ->
-            Html.ul [] <|
-                List.map (\( key, dictValue ) -> Html.li [] [ viewValue key, viewValue dictValue ]) dictValues
-
-        Decode.ElmInternals ->
-            Html.text "<internals>"
-
-        Decode.ElmFunction ->
-            Html.text "<function>"
-
-        Decode.ElmType name maybeValues ->
-            case maybeValues of
-                Nothing ->
-                    Html.text name
-
-                Just [ oneValue ] ->
-                    Html.div [] [ Html.text name, viewValue oneValue ]
-
-                Just multipleValues ->
-                    Html.div [] [ Html.text name, Html.ul [] <| List.map (\c -> Html.li [] [ viewValue c ]) multipleValues ]
-
-        Decode.ElmUnit ->
-            Html.text "()"
-
-        Decode.ElmFile name ->
-            Html.text name
-
-        Decode.ElmBytes count ->
-            Html.text <| String.fromInt count ++ "B"
-
-
 view : Model -> Html Msg
 view model =
     let
         messages =
             List.map
                 (\{ tag, value, count } ->
-                    Html.li []
+                    Html.li
+                        [ Events.onClickStopPropagation <| Toggle []
+                        ]
                         [ Html.text <| "(" ++ String.fromInt count ++ ") " ++ tag
-                        , viewValue value
+                        , Expandable.viewValue Toggle [] value
                         ]
                 )
                 model.messages
