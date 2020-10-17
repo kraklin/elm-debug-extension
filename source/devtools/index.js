@@ -16,7 +16,7 @@ const myPort = browser.runtime.connect({name: ''+browser.devtools.inspectedWindo
 
 myPort.onMessage.addListener((message) => {
   if(message !== "reloaded"){
-    app.ports.logReceived.send(message);
+    app.ports.logReceived.send([new Date().toISOString(), message]);
   }
 });
 
@@ -26,5 +26,5 @@ app.ports.parse.subscribe((valueToParse) => {
 
   const parsedLog = parse(message);
   console.log(parsedLog);
-  app.ports.parsedReceived.send({hash: hash, log: parsedLog});
+  app.ports.parsedReceived.send({hash: hash, log: parsedLog, timestamp: new Date().toISOString()});
 });

@@ -4,6 +4,7 @@ module Expandable exposing
     , decodeParsedValue
     , map
     , toggle
+    , viewMessageHeader
     , viewValue
     )
 
@@ -48,6 +49,7 @@ type alias DecodedLog =
     { tag : String
     , value : ElmValue
     , hash : Int
+    , isoTimestamp : String
     }
 
 
@@ -149,6 +151,7 @@ logDecoder =
         |> Decode.andMap (Decode.at [ "log", "name" ] Decode.string)
         |> Decode.andMap (Decode.at [ "log", "value" ] elmValueDecoder)
         |> Decode.andMap (Decode.field "hash" Decode.int)
+        |> Decode.andMap (Decode.field "timestamp" Decode.string)
 
 
 decodeParsedValue : Value -> Result Decode.Error DecodedLog
@@ -259,6 +262,8 @@ theme =
     { stringColor = Css.hex "0000ff"
     , internalsColor = Css.hex "808080"
     , keysColor = Css.hex "ff00ff"
+    , guidelinesColor = Css.hex "a0a0a0"
+    , expandTriangleColor = Css.hex "808080"
     }
 
 
@@ -347,7 +352,7 @@ viewValueHeader value =
                     Html.text name
 
                 Just [ oneValue ] ->
-                    Html.span [] [ Html.text name, viewValueHeader oneValue ]
+                    Html.span [] [ Html.text (name ++ " "), viewValueHeader oneValue ]
 
                 Just _ ->
                     Html.span
@@ -411,11 +416,38 @@ isValueOpened value =
             False
 
 
+toggableDiv child toggleAttribute content =
+    if hasNestedValues child then
+        Html.div [ toggleAttribute ] <|
+            Html.span []
+                [ Html.span [ Attrs.css [ Css.display Css.inlineBlock, Css.width (Css.px 12), Css.color theme.expandTriangleColor ] ]
+                    [ if isValueOpened child then
+                        Html.text "▾"
+
+                      else
+                        Html.text "▸"
+                    ]
+                ]
+                :: content
+
+    else
+        Html.div [] <| Html.span [] [ Html.text "\u{00A0}\u{00A0}" ] :: content
+
+
+viewMessageHeader : (Key -> msg) -> Int -> String -> ElmValue -> Html msg
+viewMessageHeader toggleMsg count tag value =
+    toggableDiv value
+        (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
+        [ Html.text <| "(" ++ String.fromInt count ++ ") " ++ tag
+        , Html.div [] [ viewValue toggleMsg [] value ]
+        ]
+
+
 viewValue : (Key -> msg) -> Key -> ElmValue -> Html msg
 viewValue toggleMsg parentKey value =
     let
-        viewChildFn idx =
-            viewValue toggleMsg (parentKey ++ [ idx ])
+        viewChildFn idx v =
+            Html.span [] [ viewValue toggleMsg (parentKey ++ [ idx ]) v ]
 
         toggleCurrent idx =
             Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ])
@@ -423,27 +455,24 @@ viewValue toggleMsg parentKey value =
         viewFn =
             viewValue toggleMsg parentKey
 
-        toggableDiv child toggleAttribute content =
-            if hasNestedValues child then
-                Html.div [ toggleAttribute ] <|
-                    Html.span []
-                        [ if isValueOpened child then
-                            Html.text "V "
-
-                          else
-                            Html.text "> "
-                        ]
-                        :: content
-
-            else
-                Html.div [] <| Html.span [] [ Html.text "\u{00A0}\u{00A0}" ] :: content
+        childrenWrapper attrs children =
+            Html.div
+                ([ Attrs.css
+                    [ Css.paddingLeft (Css.em 1)
+                    , Css.marginLeft (Css.px 3)
+                    , Css.borderLeft3 (Css.px 1) Css.solid theme.guidelinesColor
+                    ]
+                 ]
+                    ++ attrs
+                )
+                children
     in
     case value of
         ElmTuple isOpened children ->
             Html.span []
                 [ viewValueHeader value
                 , if isOpened then
-                    Html.ul [] <|
+                    childrenWrapper [] <|
                         List.indexedMap
                             (\idx child ->
                                 toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
@@ -458,7 +487,7 @@ viewValue toggleMsg parentKey value =
             Html.span []
                 [ viewValueHeader value
                 , if isOpened then
-                    Html.ul [] <|
+                    childrenWrapper [] <|
                         List.indexedMap
                             (\idx child ->
                                 toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
@@ -494,7 +523,7 @@ viewValue toggleMsg parentKey value =
             Html.span []
                 [ viewValueHeader value
                 , if isOpened then
-                    Html.ul [] <|
+                    childrenWrapper [] <|
                         List.indexedMap
                             (\idx ( key, dictValue ) ->
                                 toggableDiv dictValue
@@ -516,9 +545,11 @@ viewValue toggleMsg parentKey value =
                     Html.span []
                         [ viewValueHeader value
                         , if isOpened then
-                            toggableDiv oneValue
-                                (toggleCurrent 0)
-                                [ Html.span [] [ viewFn oneValue ] ]
+                            childrenWrapper [] <|
+                                [ toggableDiv oneValue
+                                    (toggleCurrent 0)
+                                    [ viewChildFn 0 oneValue ]
+                                ]
 
                           else
                             Html.text ""
@@ -528,7 +559,10 @@ viewValue toggleMsg parentKey value =
                     if isOpened then
                         Html.span
                             [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
-                            [ Html.text name, Html.ul [] <| List.indexedMap (\idx c -> Html.li [] [ viewChildFn idx c ]) multipleValues ]
+                            [ Html.text name
+                            , childrenWrapper [] <|
+                                List.indexedMap (\idx c -> toggableDiv c (toggleCurrent idx) [ viewChildFn idx c ]) multipleValues
+                            ]
 
                     else
                         Html.span

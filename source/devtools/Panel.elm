@@ -11,7 +11,7 @@ import Json.Decode exposing (Value)
 import Murmur3
 
 
-port logReceived : (String -> msg) -> Sub msg
+port logReceived : (( String, String ) -> msg) -> Sub msg
 
 
 port parse : ( Int, String ) -> Cmd msg
@@ -29,6 +29,7 @@ type alias DebugMessage =
     , tag : String
     , value : ElmValue
     , hash : Int
+    , isoTimestamp : String
     }
 
 
@@ -38,10 +39,10 @@ type alias Model =
 
 
 type Msg
-    = LogReceived String
+    = LogReceived ( String, String )
     | Clear
     | ParsedReceived Value
-    | Toggle Expandable.Key
+    | Toggle Int Expandable.Key
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -54,20 +55,20 @@ messageHash input =
     Murmur3.hashString 1234 input
 
 
-incrementLastMessageCount : List DebugMessage -> List DebugMessage
-incrementLastMessageCount messages =
+updateLastMessage : String -> List DebugMessage -> List DebugMessage
+updateLastMessage isoTimestamp messages =
     case messages of
         [] ->
             []
 
         lastMessage :: rest ->
-            { lastMessage | count = lastMessage.count + 1 } :: rest
+            { lastMessage | count = lastMessage.count + 1, isoTimestamp = isoTimestamp } :: rest
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        LogReceived log ->
+        LogReceived ( isoTime, log ) ->
             let
                 lastHash =
                     List.head model.messages |> Maybe.map .hash
@@ -77,7 +78,7 @@ update msg model =
 
                 ( messages, cmd ) =
                     if lastHash == Just hash then
-                        ( incrementLastMessageCount model.messages, Cmd.none )
+                        ( updateLastMessage isoTime model.messages, Cmd.none )
 
                     else
                         ( model.messages, parse ( hash, log ) )
@@ -97,23 +98,26 @@ update msg model =
 
                 messages =
                     case decodedValue of
-                        Ok { hash, tag, value } ->
-                            { count = 1, tag = tag, value = value, hash = hash } :: model.messages
+                        Ok { hash, tag, isoTimestamp, value } ->
+                            { count = 1, tag = tag, value = value, hash = hash, isoTimestamp = isoTimestamp } :: model.messages
 
                         Err e ->
                             model.messages
             in
             ( { model | messages = messages }, Cmd.none )
 
-        Toggle path ->
+        Toggle idx path ->
             let
                 updatedMessages =
-                    case model.messages of
-                        [] ->
-                            []
+                    List.indexedMap
+                        (\messageIndex message ->
+                            if messageIndex == idx then
+                                { message | value = updatedElmValue message.value }
 
-                        m :: rest ->
-                            { m | value = updatedElmValue m.value } :: rest
+                            else
+                                message
+                        )
+                        model.messages
 
                 updatedElmValue val =
                     Expandable.map path Expandable.toggle val
@@ -133,22 +137,29 @@ view : Model -> Html Msg
 view model =
     let
         messages =
-            List.map
-                (\{ tag, value, count } ->
-                    Html.li
-                        [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| Toggle []
-                        ]
-                        [ Html.text <| "(" ++ String.fromInt count ++ ") " ++ tag
-                        , Expandable.viewValue Toggle [] value
-                        ]
-                )
-                model.messages
+            model.messages
+                |> List.indexedMap
+                    (\idx { tag, value, count, hash } ->
+                        Html.div
+                            [ Attrs.css
+                                [ Css.border3 (Css.px 1) Css.solid (Css.hex "ff00ff")
+                                , Css.marginBottom (Css.px 12)
+                                , Css.backgroundColor (Css.hex "ffffff")
+                                , Css.padding2 (Css.px 12) (Css.px 8)
+                                ]
+                            ]
+                            [ Expandable.viewMessageHeader (Toggle idx) count tag value ]
+                    )
+                |> List.reverse
     in
     Html.styled Html.div
-        [ Css.fontSize <| Css.px 12, Css.fontFamily <| Css.monospace ]
+        [ Css.fontSize <| Css.px 12
+        , Css.fontFamily <| Css.monospace
+        , Css.backgroundColor <| Css.hex "f0f0f0"
+        ]
         []
         [ Html.button [ Events.onClick Clear ] [ Html.text "Clear all" ]
-        , Html.ul [] messages
+        , Html.div [] messages
         ]
 
 
