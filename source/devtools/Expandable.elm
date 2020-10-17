@@ -7,9 +7,11 @@ module Expandable exposing
     , viewValue
     )
 
-import Html exposing (Html)
+import Css
 import Html.Events as Events
 import Html.Events.Extra as Events
+import Html.Styled as Html exposing (Html)
+import Html.Styled.Attributes as Attrs
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
@@ -161,20 +163,20 @@ decodeParsedValue value =
 hasNestedValues : ElmValue -> Bool
 hasNestedValues value =
     case value of
-        ElmSequence _ _ values ->
-            not <| List.isEmpty values
-
         ElmTuple _ _ ->
             True
+
+        ElmSequence _ _ values ->
+            not <| List.isEmpty values
 
         ElmRecord _ _ ->
             True
 
-        ElmType _ _ maybeValues ->
-            maybeValues /= Nothing
-
         ElmDict _ values ->
             not <| List.isEmpty values
+
+        ElmType _ _ maybeValues ->
+            maybeValues /= Nothing
 
         _ ->
             False
@@ -183,8 +185,14 @@ hasNestedValues value =
 toggle : ElmValue -> ElmValue
 toggle value =
     case value of
+        ElmTuple isOpened values ->
+            ElmTuple (not isOpened) values
+
         ElmSequence seq isOpened values ->
             ElmSequence seq (not isOpened) values
+
+        ElmRecord isOpened values ->
+            ElmRecord (not isOpened) values
 
         ElmDict isOpened values ->
             ElmDict (not isOpened) values
@@ -200,52 +208,58 @@ toggle value =
                 Just _ ->
                     ElmType (not isOpened) name maybeValues
 
-        ElmRecord isOpened values ->
-            ElmRecord (not isOpened) values
-
-        _ ->
-            value
-
-
-mapNestedValue : Int -> (ElmValue -> ElmValue) -> ElmValue -> ElmValue
-mapNestedValue mapIndex fn value =
-    case value of
-        ElmRecord a values ->
-            ElmRecord a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond fn) values
-
-        ElmSequence a b values ->
-            ElmSequence a b <| List.updateIfIndex ((==) mapIndex) fn values
-
-        ElmType a b maybeValues ->
-            case maybeValues of
-                Nothing ->
-                    value
-
-                Just values ->
-                    ElmType a b <| Just <| List.updateIfIndex ((==) mapIndex) fn values
-
-        ElmDict a values ->
-            ElmDict a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond fn) values
-
         _ ->
             value
 
 
 map : Key -> (ElmValue -> ElmValue) -> ElmValue -> ElmValue
 map key fn value =
+    let
+        mapNestedValue mapIndex mappedFn =
+            case value of
+                ElmTuple a values ->
+                    ElmTuple a <| List.updateIfIndex ((==) mapIndex) mappedFn values
+
+                ElmSequence a b values ->
+                    ElmSequence a b <| List.updateIfIndex ((==) mapIndex) mappedFn values
+
+                ElmRecord a values ->
+                    ElmRecord a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+
+                ElmDict a values ->
+                    ElmDict a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+
+                ElmType a b maybeValues ->
+                    case maybeValues of
+                        Nothing ->
+                            value
+
+                        Just values ->
+                            ElmType a b <| Just <| List.updateIfIndex ((==) mapIndex) mappedFn values
+
+                _ ->
+                    value
+    in
     case key of
         [] ->
             fn value
 
         [ idx ] ->
-            mapNestedValue idx fn value
+            mapNestedValue idx fn
 
         idx :: rest ->
-            mapNestedValue idx (map rest fn) value
+            mapNestedValue idx (map rest fn)
 
 
 
 -- VIEW --
+
+
+theme =
+    { stringColor = Css.hex "0000ff"
+    , internalsColor = Css.hex "808080"
+    , keysColor = Css.hex "ff00ff"
+    }
 
 
 viewValueHeader : ElmValue -> Html msg
@@ -306,7 +320,8 @@ viewValueHeader value =
                     [ ( name, singleValue ) ] ->
                         Html.span []
                             [ Html.text "{"
-                            , Html.text <| name ++ ": "
+                            , Html.span [ Attrs.css [ Css.color theme.keysColor ] ] [ Html.text name ]
+                            , Html.text ": "
                             , viewValueHeader singleValue
                             , Html.text "}"
                             ]
@@ -314,7 +329,8 @@ viewValueHeader value =
                     ( name, firstItem ) :: _ ->
                         Html.span []
                             [ Html.text "{"
-                            , Html.text <| name ++ ": "
+                            , Html.span [ Attrs.css [ Css.color theme.keysColor ] ] [ Html.text name ]
+                            , Html.text ": "
                             , viewValueHeader firstItem
                             , Html.text ", ...}"
                             ]
@@ -339,7 +355,7 @@ viewValueHeader value =
                         [ Html.text name, Html.text " ..." ]
 
         ElmString str ->
-            Html.text <| "\"" ++ str ++ "\""
+            Html.span [ Attrs.css [ Css.color theme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
 
         ElmFloat float ->
             Html.text <| String.fromFloat float ++ "f"
@@ -356,10 +372,12 @@ viewValueHeader value =
                     "False"
 
         ElmInternals ->
-            Html.text "<internals>"
+            Html.span [ Attrs.css [ Css.color theme.internalsColor ] ]
+                [ Html.text "<internals>" ]
 
         ElmFunction ->
-            Html.text "<function>"
+            Html.span [ Attrs.css [ Css.color theme.internalsColor ] ]
+                [ Html.text "<function>" ]
 
         ElmUnit ->
             Html.text "()"
@@ -371,33 +389,64 @@ viewValueHeader value =
             Html.text <| String.fromInt count ++ "B"
 
 
+isValueOpened : ElmValue -> Bool
+isValueOpened value =
+    case value of
+        ElmTuple isOpened _ ->
+            isOpened
+
+        ElmSequence _ isOpened _ ->
+            isOpened
+
+        ElmRecord isOpened _ ->
+            isOpened
+
+        ElmDict isOpened _ ->
+            isOpened
+
+        ElmType isOpened _ _ ->
+            isOpened
+
+        _ ->
+            False
+
+
 viewValue : (Key -> msg) -> Key -> ElmValue -> Html msg
 viewValue toggleMsg parentKey value =
     let
         viewChildFn idx =
             viewValue toggleMsg (parentKey ++ [ idx ])
 
+        toggleCurrent idx =
+            Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ])
+
         viewFn =
             viewValue toggleMsg parentKey
+
+        toggableDiv child toggleAttribute content =
+            if hasNestedValues child then
+                Html.div [ toggleAttribute ] <|
+                    Html.span []
+                        [ if isValueOpened child then
+                            Html.text "V "
+
+                          else
+                            Html.text "> "
+                        ]
+                        :: content
+
+            else
+                Html.div [] <| Html.span [] [ Html.text "\u{00A0}\u{00A0}" ] :: content
     in
     case value of
         ElmTuple isOpened children ->
             Html.span []
-                [ Html.span []
-                    [ Html.text "("
-                    , Html.span []
-                        (List.map viewFn children
-                            |> List.intersperse (Html.text ", ")
-                        )
-                    , Html.text ")"
-                    ]
+                [ viewValueHeader value
                 , if isOpened then
                     Html.ul [] <|
-                        List.map
-                            (\v ->
-                                Html.li
-                                    []
-                                    [ viewFn v ]
+                        List.indexedMap
+                            (\idx child ->
+                                toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
                             )
                             children
 
@@ -411,11 +460,8 @@ viewValue toggleMsg parentKey value =
                 , if isOpened then
                     Html.ul [] <|
                         List.indexedMap
-                            (\idx c ->
-                                Html.li
-                                    [ Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ]) ]
-                                    [ viewChildFn idx c
-                                    ]
+                            (\idx child ->
+                                toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
                             )
                             children
 
@@ -430,11 +476,15 @@ viewValue toggleMsg parentKey value =
                     recordValues
                         |> List.indexedMap
                             (\idx ( key, child ) ->
-                                Html.div
-                                    [ Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ]) ]
-                                    [ Html.text (key ++ ": "), viewChildFn idx child ]
+                                toggableDiv child
+                                    (toggleCurrent idx)
+                                    [ Html.span [ Attrs.css [ Css.color theme.keysColor ] ]
+                                        [ Html.text key ]
+                                    , Html.text ": "
+                                    , viewChildFn idx child
+                                    ]
                             )
-                        |> Html.div []
+                        |> Html.div [ Attrs.css [ Css.paddingLeft (Css.em 1) ] ]
 
                   else
                     Html.text ""
@@ -447,8 +497,8 @@ viewValue toggleMsg parentKey value =
                     Html.ul [] <|
                         List.indexedMap
                             (\idx ( key, dictValue ) ->
-                                Html.li
-                                    [ Events.onClickStopPropagation <| toggleMsg <| parentKey ++ [ idx ] ]
+                                toggableDiv dictValue
+                                    (toggleCurrent idx)
                                     [ viewFn key, viewChildFn idx dictValue ]
                             )
                             dictValues
@@ -463,17 +513,26 @@ viewValue toggleMsg parentKey value =
                     Html.text name
 
                 Just [ oneValue ] ->
-                    Html.span [] [ Html.text name, viewFn oneValue ]
+                    Html.span []
+                        [ viewValueHeader value
+                        , if isOpened then
+                            toggableDiv oneValue
+                                (toggleCurrent 0)
+                                [ Html.span [] [ viewFn oneValue ] ]
+
+                          else
+                            Html.text ""
+                        ]
 
                 Just multipleValues ->
                     if isOpened then
                         Html.span
-                            [ Events.onClickStopPropagation <| toggleMsg <| parentKey ]
+                            [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
                             [ Html.text name, Html.ul [] <| List.indexedMap (\idx c -> Html.li [] [ viewChildFn idx c ]) multipleValues ]
 
                     else
                         Html.span
-                            [ Events.onClickStopPropagation <| toggleMsg <| parentKey ]
+                            [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
                             [ Html.text name, Html.text " ..." ]
 
         _ ->

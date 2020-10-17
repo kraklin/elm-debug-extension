@@ -1,10 +1,12 @@
 port module Panel exposing (main)
 
 import Browser
+import Css
 import Expandable exposing (ElmValue)
-import Html exposing (Html)
-import Html.Events as Events
 import Html.Events.Extra as Events
+import Html.Styled as Html exposing (Html)
+import Html.Styled.Attributes as Attrs
+import Html.Styled.Events as Events
 import Json.Decode exposing (Value)
 import Murmur3
 
@@ -134,7 +136,7 @@ view model =
             List.map
                 (\{ tag, value, count } ->
                     Html.li
-                        [ Events.onClickStopPropagation <| Toggle []
+                        [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| Toggle []
                         ]
                         [ Html.text <| "(" ++ String.fromInt count ++ ") " ++ tag
                         , Expandable.viewValue Toggle [] value
@@ -142,7 +144,9 @@ view model =
                 )
                 model.messages
     in
-    Html.div []
+    Html.styled Html.div
+        [ Css.fontSize <| Css.px 12, Css.fontFamily <| Css.monospace ]
+        []
         [ Html.button [ Events.onClick Clear ] [ Html.text "Clear all" ]
         , Html.ul [] messages
         ]
@@ -153,6 +157,6 @@ main =
     Browser.element
         { init = init
         , update = update
-        , view = view
+        , view = view >> Html.toUnstyled
         , subscriptions = subscriptions
         }
