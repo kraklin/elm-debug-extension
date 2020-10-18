@@ -145,7 +145,7 @@ view model =
                                 [ Css.border3 (Css.px 1) Css.solid (Css.hex "ff00ff")
                                 , Css.marginBottom (Css.px 12)
                                 , Css.backgroundColor (Css.hex "ffffff")
-                                , Css.padding2 (Css.px 12) (Css.px 8)
+                                , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
                             [ Expandable.viewMessageHeader (Toggle idx) count tag value ]
@@ -158,8 +158,25 @@ view model =
         , Css.backgroundColor <| Css.hex "f0f0f0"
         ]
         []
-        [ Html.button [ Events.onClick Clear ] [ Html.text "Clear all" ]
-        , Html.div [] messages
+        [ Html.div
+            [ Attrs.css
+                [ Css.position Css.fixed
+                , Css.displayFlex
+                , Css.top (Css.px 0)
+                , Css.height (Css.px 24)
+                , Css.backgroundColor (Css.hex "ffffff")
+                , Css.width (Css.pct 100)
+                ]
+            ]
+            [ Html.button [ Events.onClick Clear ] [ Html.text "Clear all" ] ]
+        , Html.div
+            [ Attrs.css
+                [ Css.paddingTop (Css.px 32)
+                , Css.paddingLeft (Css.px 8)
+                , Css.paddingRight (Css.px 8)
+                ]
+            ]
+            messages
         ]
 
 

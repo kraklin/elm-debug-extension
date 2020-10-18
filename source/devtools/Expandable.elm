@@ -420,7 +420,14 @@ toggableDiv child toggleAttribute content =
     if hasNestedValues child then
         Html.div [ toggleAttribute ] <|
             Html.span []
-                [ Html.span [ Attrs.css [ Css.display Css.inlineBlock, Css.width (Css.px 12), Css.color theme.expandTriangleColor ] ]
+                [ Html.span
+                    [ Attrs.css
+                        [ Css.display Css.inlineBlock
+                        , Css.cursor Css.pointer
+                        , Css.width (Css.px 12)
+                        , Css.color theme.expandTriangleColor
+                        ]
+                    ]
                     [ if isValueOpened child then
                         Html.text "▾"
 
@@ -431,15 +438,37 @@ toggableDiv child toggleAttribute content =
                 :: content
 
     else
-        Html.div [] <| Html.span [] [ Html.text "\u{00A0}\u{00A0}" ] :: content
+        Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] content
 
 
 viewMessageHeader : (Key -> msg) -> Int -> String -> ElmValue -> Html msg
 viewMessageHeader toggleMsg count tag value =
-    toggableDiv value
-        (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
-        [ Html.text <| "(" ++ String.fromInt count ++ ") " ++ tag
-        , Html.div [] [ viewValue toggleMsg [] value ]
+    let
+        viewCount =
+            if count > 1 then
+                Html.span
+                    [ Attrs.css
+                        [ Css.display Css.inlineBlock
+                        , Css.color <| Css.hex "ffffff"
+                        , Css.backgroundColor <| Css.hex "ff00ff"
+                        , Css.textAlign <| Css.center
+                        , Css.borderRadius <| Css.px 14
+                        , Css.padding2 (Css.px 0) (Css.px 8)
+                        , Css.fontSize <| Css.px 10
+                        , Css.marginRight (Css.px 4)
+                        ]
+                    ]
+                    [ Html.text <| String.fromInt count ]
+
+            else
+                Html.text ""
+    in
+    Html.div []
+        [ viewCount
+        , Html.text tag
+        , toggableDiv value
+            (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
+            [ viewValue toggleMsg [] value ]
         ]
 
 
@@ -513,7 +542,7 @@ viewValue toggleMsg parentKey value =
                                     , viewChildFn idx child
                                     ]
                             )
-                        |> Html.div [ Attrs.css [ Css.paddingLeft (Css.em 1) ] ]
+                        |> childrenWrapper []
 
                   else
                     Html.text ""
@@ -528,7 +557,7 @@ viewValue toggleMsg parentKey value =
                             (\idx ( key, dictValue ) ->
                                 toggableDiv dictValue
                                     (toggleCurrent idx)
-                                    [ viewFn key, viewChildFn idx dictValue ]
+                                    [ viewFn key, Html.text ": ", viewChildFn idx dictValue ]
                             )
                             dictValues
 

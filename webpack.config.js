@@ -59,7 +59,7 @@ module.exports = {
     contentScript: './source/scripts/contentScript.js',
     popup: ['./source/popup/index.js', './source/popup/styles.scss'],
     devtools: ['./source/devtools/devtools.js' ],
-    devtoolsPanel: ['./source/devtools/index.js' ],
+    devtoolsPanel: ['./source/devtools/index.js', './source/devtools/styles.scss' ],
     options: ['./source/options/index.js', './source/options/styles.scss'],
     styles: ['./source/popup/styles.scss', './source/styles/options.scss'],
   },
