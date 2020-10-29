@@ -14,6 +14,12 @@ import Murmur3
 port logReceived : (( String, String ) -> msg) -> Sub msg
 
 
+port bulkLogReceived : (List Value -> msg) -> Sub msg
+
+
+port bulkParse : List String -> Cmd msg
+
+
 port parse : ( Int, String ) -> Cmd msg
 
 
@@ -40,6 +46,7 @@ type alias Model =
 
 type Msg
     = LogReceived ( String, String )
+    | BulkLogReceived (List Value)
     | Clear
     | ParsedReceived Value
     | Toggle Int Expandable.Key
@@ -85,6 +92,9 @@ update msg model =
             in
             ( { model | messages = messages }, cmd )
 
+        BulkLogReceived messages ->
+            ( model, bulkParse [ "todo" ] )
+
         Clear ->
             ( { messages = []
               }
@@ -129,6 +139,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ logReceived LogReceived
+        , bulkLogReceived BulkLogReceived
         , parsedReceived ParsedReceived
         ]
 

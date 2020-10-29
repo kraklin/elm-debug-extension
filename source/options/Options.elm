@@ -32,6 +32,7 @@ type alias GlobalOptions =
     { simple_mode : Bool
     , limit : Int
     , debug : Bool
+    , devPanel : Bool
     }
 
 
@@ -44,6 +45,7 @@ type alias Form =
     { limit : String
     , debug : Bool
     , mode : Mode
+    , devPanel : Bool
     }
 
 
@@ -60,6 +62,11 @@ limitDecoder =
 
 debugDecoder : Decoder Bool Error Bool
 debugDecoder =
+    Decoder.identity
+
+
+devPanelDecoder : Decoder Bool Error Bool
+devPanelDecoder =
     Decoder.identity
 
 
@@ -81,12 +88,14 @@ formDecoder =
         |> Decoder.field (Decoder.lift .mode modeDecoder)
         |> Decoder.field (Decoder.lift .limit limitDecoder)
         |> Decoder.field (Decoder.lift .debug debugDecoder)
+        |> Decoder.field (Decoder.lift .devPanel devPanelDecoder)
 
 
 optionsToForm : GlobalOptions -> Form
-optionsToForm { limit, simple_mode, debug } =
+optionsToForm { limit, simple_mode, debug, devPanel } =
     { limit = String.fromInt limit
     , debug = debug
+    , devPanel = devPanel
     , mode =
         if simple_mode then
             Simple
@@ -132,6 +141,7 @@ type Msg
     | UpdateLimitForm String
     | ValidateForm
     | SaveChanges
+    | SetDevPanel Bool
     | GlobalsSavedResult (Maybe String)
 
 
@@ -151,6 +161,9 @@ update msg model =
 
         SetDebug newDebug ->
             ( setFormValue { modelForm | debug = newDebug }, Cmd.none )
+
+        SetDevPanel newDevPanel ->
+            ( setFormValue { modelForm | devPanel = newDevPanel }, Cmd.none )
 
         SetSimpleMode newMode ->
             ( setFormValue { modelForm | mode = newMode }, Cmd.none )
@@ -377,6 +390,44 @@ simpleModeSettings simpleMode =
     section "Output object shape" simpleSettingsForm help
 
 
+customDevPanelSettings : Bool -> Element Msg
+customDevPanelSettings devpanelEnabled =
+    let
+        checkbox value =
+            if value then
+                Input.button
+                    [ Element.padding 2
+                    , Element.width <| Element.px 20
+                    , Element.height <| Element.px 20
+                    , Border.color dark
+                    , Border.width 1
+                    , Border.rounded 3
+                    , Background.color dark
+                    , Font.color light
+                    ]
+                    { label = Element.text "✓", onPress = Nothing }
+
+            else
+                Input.button
+                    [ Element.padding 4
+                    , Element.width <| Element.px 20
+                    , Element.height <| Element.px 20
+                    , Border.color dark
+                    , Border.width 1
+                    , Border.rounded 3
+                    , Background.color light
+                    , Font.color dark
+                    ]
+                    { label = Element.text " ", onPress = Nothing }
+
+        debugForm =
+            Element.row [ Element.spacing 20 ]
+                [ Input.checkbox [] { onChange = SetDevPanel, icon = checkbox, checked = devpanelEnabled, label = Input.labelRight [] (Element.text "Enable Elm dev panel") }
+                ]
+    in
+    section "Experimental features" debugForm Element.none
+
+
 debugModeSettings : Bool -> Element Msg
 debugModeSettings debugTurnedOn =
     let
@@ -409,7 +460,7 @@ debugModeSettings debugTurnedOn =
 
         debugForm =
             Element.row [ Element.spacing 20 ]
-                [ Input.checkbox [] { onChange = SetDebug, icon = checkbox, checked = debugTurnedOn, label = Input.labelLeft [] (Element.text "Debug mode") }
+                [ Input.checkbox [] { onChange = SetDebug, icon = checkbox, checked = debugTurnedOn, label = Input.labelRight [] (Element.text "Debug mode") }
                 ]
     in
     section "Debug mode" debugForm Element.none
@@ -463,6 +514,7 @@ content model =
               else
                 Element.none
             , debugModeSettings model.form.debug
+            , customDevPanelSettings model.form.devPanel
             , saveButton model.savedResult
             ]
 

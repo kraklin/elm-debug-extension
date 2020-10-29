@@ -25,13 +25,22 @@ const setIcon = (tabId, isActive) => {
   });
 }
 
-// handle on connect
+const bufferLimit = 30;
 
+// maybe handle this in one object per page id would be better
 let ports = {}
+let comms = {}
+let buffer = {}
 
 browser.runtime.onConnect.addListener((port)=>{
   if(!!port.name){
     ports[port.name] = port;
+    comms[port.name] = true;
+
+    if(buffer[port.name].length > 0){
+      port.postMessage({action: "FLUSH", data: buffer[port.name]});
+      buffer[port.name] = new Array();
+    }
   }
 });
 
@@ -43,11 +52,34 @@ browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {
   console.log("request", _request);
 
   // Do something with the message!
-  // alert(request.url);
+  if(_request.action === "ELM_DEVTOOL_CREATED"){
+    // is this useful somehow?
+  }
+
+  if(_request.action === "ELM_DEVTOOL_REMOVED"){
+    comms[_request.data] = false;
+    buffer[_request.data] = new Array();
+  }
+
   if(_request.action === "ELM_LOG"){
-    const senderId = _sender.tab.id+'';
-    if(ports[senderId]){
-      ports[senderId].postMessage(_request.data);
+    const senderId = String(_sender.tab.id);
+
+    if(comms[senderId] === true){
+      if(ports[senderId]){
+        ports[senderId].postMessage(_request.data);
+      }
+    }
+    else {
+      if(buffer[senderId] === undefined){
+        buffer[senderId] = new Array();
+      }
+
+      buffer[senderId].push({time: new Date().toISOString(), log: _request.data});
+
+      // cap the buffer
+      if (buffer[senderId].length > bufferLimit) {
+        buffer[senderId].shift();
+      }
     }
   }
 
@@ -56,15 +88,6 @@ browser.runtime.onMessage.addListener((_request, _sender, _sendResponse) => {
     setIcon(_sender.tab.id, _request.active)
   }
 
-  return;// Promise.resolve('got your message, thanks!');
+  return;
 });
 
-// handle page reload
-browser.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-   if (changeInfo.status == 'complete') {
-     const senderId = tabId+'';
-     if(ports[senderId]){
-       ports[senderId].postMessage("reloaded");
-     }
-   }
-});

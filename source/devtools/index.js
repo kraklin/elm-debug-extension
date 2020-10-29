@@ -12,12 +12,25 @@ const app = Elm.Panel.init({
   flags: { }
 });
 
-const myPort = browser.runtime.connect({name: ''+browser.devtools.inspectedWindow.tabId});
+const tabId = String(browser.devtools.inspectedWindow.tabId);
+const myPort = browser.runtime.connect({name: tabId});
 
 myPort.onMessage.addListener((message) => {
-  if(message !== "reloaded"){
+  if(message.action && message.action === "FLUSH"){
+    app.ports.bulkLogReceived.send(message.data);
+  }
+  else {
     app.ports.logReceived.send([new Date().toISOString(), message]);
   }
+});
+
+window.addEventListener('beforeunload', function (e) {
+  browser.runtime.sendMessage({action: "ELM_DEVTOOL_REMOVED", data: tabId});
+});
+
+app.ports.bulkParse.subscribe((valuesToParse) => {
+  // (hash, count, message, time)
+
 });
 
 app.ports.parse.subscribe((valueToParse) => {
@@ -25,6 +38,9 @@ app.ports.parse.subscribe((valueToParse) => {
   const message = valueToParse[1];
 
   const parsedLog = parse(message);
-  console.log(parsedLog);
-  app.ports.parsedReceived.send({hash: hash, log: parsedLog, timestamp: new Date().toISOString()});
+  app.ports.parsedReceived.send({
+    hash: hash,
+    log: parsedLog,
+    timestamp: new Date().toISOString()
+  });
 });

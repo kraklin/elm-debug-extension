@@ -12,16 +12,15 @@ browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
 
   app.ports.sendRequest.subscribe((request) => {
     send(request);
-  }) 
+  })
 
   app.ports.openOptionsPage.subscribe(() => {
     browser.runtime.openOptionsPage();
-  }) 
+  })
 
   app.ports.openPage.subscribe((url) => {
-    console.log("url", url);
     browser.tabs.create({url});
-  }) 
+  })
 
   function handleError(error) {
     console.error('Error:', error.message);
@@ -32,7 +31,7 @@ browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
 
     sending.then((message) => {
       if(message && message.opts){
-        app.ports.receive.send(message.opts); 
+        app.ports.receive.send(message.opts);
       }
     }, handleError);
   }
