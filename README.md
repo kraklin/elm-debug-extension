@@ -2,10 +2,10 @@
 <p align="center">Browser extension, that is making your elm Debug.log output much easier to work with.</p>
 <div align="center">
   <a href="https://github.com/kraklin/elm-debug-extension/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/kraklin/elm-debug-extension.svg" alt="LICENSE" />
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="LICENSE" />
   </a>
 </div>
-<p align="center">❤️  Love it? ⭐️ Star it on [GitHub](https://github.com/kraklin/elm-debug-extension/stargazers)</p>
+<p align="center">❤️  Love it? ⭐️ <a href="https://github.com/kraklin/elm-debug-extension/stargazers">Star it</a>.</p>
 <hr />
 
 ## Features
@@ -15,8 +15,8 @@
 
 ## Browser Support
 
-| [![Chrome](https://raw.github.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png)](/) | [![Firefox](https://raw.github.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png)](/) | [![Opera](https://raw.github.com/alrra/browser-logos/master/src/opera/opera_48x48.png)](/) | [![Edge](https://raw.github.com/alrra/browser-logos/master/src/edge/edge_48x48.png)](/) | [![Yandex](https://raw.github.com/alrra/browser-logos/master/src/yandex/yandex_48x48.png)](/) | [![Brave](https://raw.github.com/alrra/browser-logos/master/src/brave/brave_48x48.png)](/) | [![vivaldi](https://raw.github.com/alrra/browser-logos/master/src/vivaldi/vivaldi_48x48.png)](/) |
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [![Chrome](https://raw.github.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png)](https://chrome.google.com/webstore/detail/elm-debug-helper/edlhclhffmclbhgifomamlomnfolnepa) | [![Firefox](https://raw.github.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png)](https://addons.mozilla.org/en-GB/firefox/addon/elm-debug-helper/) | [![Opera](https://raw.github.com/alrra/browser-logos/master/src/opera/opera_48x48.png)](https://chrome.google.com/webstore/detail/elm-debug-helper/edlhclhffmclbhgifomamlomnfolnepa) | [![Edge](https://raw.github.com/alrra/browser-logos/master/src/edge/edge_48x48.png)](https://chrome.google.com/webstore/detail/elm-debug-helper/edlhclhffmclbhgifomamlomnfolnepa) | [![Brave](https://raw.github.com/alrra/browser-logos/master/src/brave/brave_48x48.png)](https://chrome.google.com/webstore/detail/elm-debug-helper/edlhclhffmclbhgifomamlomnfolnepa) | [![vivaldi](https://raw.github.com/alrra/browser-logos/master/src/vivaldi/vivaldi_48x48.png)](https://chrome.google.com/webstore/detail/elm-debug-helper/edlhclhffmclbhgifomamlomnfolnepa) |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 49 & later ✔ | 52 & later ✔ | 36 & later ✔ | 79 & later ✔ | Latest ✔ | Latest ✔ | Latest ✔
 
 ### Development

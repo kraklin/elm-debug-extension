@@ -21,9 +21,6 @@ port sendRequest : Request -> Cmd msg
 port openOptionsPage : () -> Cmd msg
 
 
-port openPage : String -> Cmd msg
-
-
 port receive : (DebugOptions -> msg) -> Sub msg
 
 
@@ -58,7 +55,6 @@ type Msg
     = NoOp
     | UpdateOptions DebugOptions
     | OpenOptionsPage
-    | OpenFeedbackForm
     | ToggleDebug
 
 
@@ -76,9 +72,6 @@ update msg model =
 
         OpenOptionsPage ->
             ( model, openOptionsPage () )
-
-        OpenFeedbackForm ->
-            ( model, openPage "https://forms.gle/DaUmAMj8PVTc6zpa6" )
 
 
 
@@ -176,29 +169,10 @@ header =
 footer : String -> Html Msg
 footer version =
     HtmlStyled.div [ css [ Css.displayFlex, Css.padding2 (px 12) (px 18) ] ]
-        [ HtmlStyled.button
-            [ css
-                [ Css.padding (px 0)
-                , Css.border (px 0)
-                , Css.cursor Css.pointer
-                , Css.color grey
-                , Css.hover
-                    [ Css.color dark
-                    ]
-                , Transitions.transition
-                    [ Transitions.color 200
-                    ]
-                ]
-            , Events.onClick OpenFeedbackForm
-            , Attrs.title "Feedback"
-            ]
-            [ HtmlStyled.div [ css [ Css.width (px 16), Css.height (px 16) ] ] [ commentIcon ]
-            ]
-        , HtmlStyled.div
+        [ HtmlStyled.div
             [ css
                 [ Css.flex (int 1)
                 , Css.fontSize (px 9)
-                , Css.margin2 (px 0) (px 12)
                 , Css.color (Css.hex "5A6378")
                 , Css.alignSelf Css.center
                 ]
