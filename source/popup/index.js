@@ -18,10 +18,6 @@ browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
     browser.runtime.openOptionsPage();
   });
 
-  app.ports.openPage.subscribe((url) => {
-    browser.tabs.create({url});
-  })
-
   function handleError(error) {
     console.error('Error:', error.message);
   }

@@ -2,28 +2,34 @@ port module Panel exposing (main)
 
 import Browser
 import Css
+import Dict
 import Expandable exposing (ElmValue)
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events
-import Json.Decode exposing (Value)
+import Json.Decode as Decode exposing (Value)
+import Json.Decode.Extra as Decode
+import List.Extra as List
 import Murmur3
 
 
 port logReceived : (( String, String ) -> msg) -> Sub msg
 
 
-port bulkLogReceived : (List Value -> msg) -> Sub msg
-
-
-port bulkParse : List String -> Cmd msg
-
-
 port parse : ( Int, String ) -> Cmd msg
 
 
 port parsedReceived : (Value -> msg) -> Sub msg
+
+
+port bulkLogReceived : (Value -> msg) -> Sub msg
+
+
+port bulkParse : List ( BulkMessage, Int ) -> Cmd msg
+
+
+port bulkParsedReceived : (Value -> msg) -> Sub msg
 
 
 type alias Flags =
@@ -39,6 +45,13 @@ type alias DebugMessage =
     }
 
 
+type alias BulkMessage =
+    { time : String
+    , log : String
+    , hash : Int
+    }
+
+
 type alias Model =
     { messages : List DebugMessage
     }
@@ -46,9 +59,10 @@ type alias Model =
 
 type Msg
     = LogReceived ( String, String )
-    | BulkLogReceived (List Value)
+    | BulkLogReceived Value
     | Clear
     | ParsedReceived Value
+    | BulkParsedReceived Value
     | Toggle Int Expandable.Key
 
 
@@ -93,7 +107,30 @@ update msg model =
             ( { model | messages = messages }, cmd )
 
         BulkLogReceived messages ->
-            ( model, bulkParse [ "todo" ] )
+            let
+                bulkMessageDecoder =
+                    Decode.map2 (\t l -> BulkMessage t l (messageHash l))
+                        (Decode.field "time" Decode.string)
+                        (Decode.field "log" Decode.string)
+
+                decodedValues : Result Decode.Error (List BulkMessage)
+                decodedValues =
+                    Decode.decodeValue
+                        (Decode.list bulkMessageDecoder)
+                        messages
+
+                toParse =
+                    case decodedValues of
+                        Ok values ->
+                            values
+                                |> List.groupWhile (\v1 v2 -> v1.hash == v2.hash)
+                                |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
+                                |> bulkParse
+
+                        Err err ->
+                            Cmd.none
+            in
+            ( model, toParse )
 
         Clear ->
             ( { messages = []
@@ -109,12 +146,43 @@ update msg model =
                 messages =
                     case decodedValue of
                         Ok { hash, tag, isoTimestamp, value } ->
-                            { count = 1, tag = tag, value = value, hash = hash, isoTimestamp = isoTimestamp } :: model.messages
+                            { count = 1
+                            , tag = tag
+                            , value = value
+                            , hash = hash
+                            , isoTimestamp = isoTimestamp
+                            }
+                                :: model.messages
 
                         Err e ->
                             model.messages
             in
             ( { model | messages = messages }, Cmd.none )
+
+        BulkParsedReceived parsedValue ->
+            let
+                decoder =
+                    Decode.map2
+                        (\log count ->
+                            { count = count
+                            , tag = log.tag
+                            , value = log.value
+                            , hash = log.hash
+                            , isoTimestamp = log.isoTimestamp
+                            }
+                        )
+                        Expandable.logDecoder
+                        (Decode.field "count" Decode.int)
+
+                decodedMessages =
+                    case Decode.decodeValue (Decode.list decoder) parsedValue of
+                        Ok messages ->
+                            List.reverse messages ++ model.messages
+
+                        Err _ ->
+                            model.messages
+            in
+            ( { model | messages = decodedMessages }, Cmd.none )
 
         Toggle idx path ->
             let
@@ -141,6 +209,7 @@ subscriptions _ =
         [ logReceived LogReceived
         , bulkLogReceived BulkLogReceived
         , parsedReceived ParsedReceived
+        , bulkParsedReceived BulkParsedReceived
         ]
 
 

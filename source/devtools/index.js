@@ -29,8 +29,17 @@ window.addEventListener('beforeunload', function (e) {
 });
 
 app.ports.bulkParse.subscribe((valuesToParse) => {
-  // (hash, count, message, time)
+  // List (message, count)
+  const parsedValues = valuesToParse.map((value) => {
+    return {
+      log: parse(value[0].log),
+      hash: value[0].hash,
+      timestamp: value[0].time,
+      count: value[1]
+      };
+  });
 
+  app.ports.bulkParsedReceived.send(parsedValues);
 });
 
 app.ports.parse.subscribe((valueToParse) => {

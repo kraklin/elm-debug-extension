@@ -2,6 +2,7 @@ module Expandable exposing
     ( ElmValue
     , Key
     , decodeParsedValue
+    , logDecoder
     , map
     , toggle
     , viewMessageHeader
