@@ -32,8 +32,42 @@ port bulkParse : List ( BulkMessage, Int ) -> Cmd msg
 port bulkParsedReceived : (Value -> msg) -> Sub msg
 
 
+type Theme
+    = Light
+    | Dark
+
+
 type alias Flags =
-    ()
+    { theme : Theme }
+
+
+defaultFlags : Flags
+defaultFlags =
+    { theme = Light
+    }
+
+
+decodeFlags : Value -> Flags
+decodeFlags jsonValue =
+    let
+        themeDecoder =
+            Decode.string
+                |> Decode.map
+                    (\theme ->
+                        case theme of
+                            "dark" ->
+                                Dark
+
+                            _ ->
+                                Light
+                    )
+    in
+    jsonValue
+        |> Decode.decodeValue
+            (Decode.succeed Flags
+                |> Decode.andMap (Decode.field "theme" themeDecoder)
+            )
+        |> Result.withDefault defaultFlags
 
 
 type alias DebugMessage =
@@ -54,6 +88,7 @@ type alias BulkMessage =
 
 type alias Model =
     { messages : List DebugMessage
+    , flags : Flags
     }
 
 
@@ -67,8 +102,8 @@ type Msg
 
 
 init : Flags -> ( Model, Cmd Msg )
-init _ =
-    ( { messages = [] }, Cmd.none )
+init flags =
+    ( { messages = [], flags = flags }, Cmd.none )
 
 
 messageHash : String -> Int
@@ -133,7 +168,8 @@ update msg model =
             ( model, toParse )
 
         Clear ->
-            ( { messages = []
+            ( { model
+                | messages = []
               }
             , Cmd.none
             )
@@ -213,18 +249,57 @@ subscriptions _ =
         ]
 
 
+type alias ThemeColors =
+    { background : Css.Color
+    , foreground : Css.Color
+    , buttonBackground : Css.Color
+    , buttonForeground : Css.Color
+    , primary : Css.Color
+    , panelBackground : Css.Color
+    }
+
+
+lightTheme : ThemeColors
+lightTheme =
+    { background = Css.hex "ffffff"
+    , foreground = Css.hex "000000"
+    , buttonBackground = Css.hex "f0f0f0"
+    , buttonForeground = Css.hex "000000"
+    , primary = Css.hex "ff00ff"
+    , panelBackground = Css.rgba 0 0 0 0.03
+    }
+
+
+themeColors : Theme -> ThemeColors
+themeColors theme =
+    if theme == Dark then
+        { lightTheme
+            | background = Css.hex "0f0f0f"
+            , foreground = Css.hex "ffffff"
+            , buttonBackground = Css.hex "303030"
+            , buttonForeground = Css.hex "ffffff"
+            , panelBackground = Css.rgba 255 255 255 0.1
+        }
+
+    else
+        lightTheme
+
+
 view : Model -> Html Msg
 view model =
     let
+        colors =
+            themeColors model.flags.theme
+
         messages =
             model.messages
                 |> List.indexedMap
                     (\idx { tag, value, count, hash } ->
                         Html.div
                             [ Attrs.css
-                                [ Css.border3 (Css.px 1) Css.solid (Css.hex "ff00ff")
-                                , Css.marginBottom (Css.px 12)
-                                , Css.backgroundColor (Css.hex "ffffff")
+                                [ Css.marginBottom (Css.px 12)
+                                , Css.backgroundColor colors.panelBackground
+                                , Css.color colors.foreground
                                 , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
@@ -235,35 +310,51 @@ view model =
     Html.styled Html.div
         [ Css.fontSize <| Css.px 12
         , Css.fontFamily <| Css.monospace
-        , Css.backgroundColor <| Css.hex "f0f0f0"
+
+        --, Css.backgroundColor colors.backgroundColor
+        , Css.flexGrow <| Css.int 1
+        , Css.displayFlex
+        , Css.flexDirection Css.column
+        , Css.maxHeight <| Css.vh 100
         ]
         []
         [ Html.div
             [ Attrs.css
-                [ Css.position Css.fixed
-                , Css.displayFlex
-                , Css.top (Css.px 0)
-                , Css.height (Css.px 24)
-                , Css.backgroundColor (Css.hex "ffffff")
+                [ Css.displayFlex
+                , Css.backgroundColor colors.background
+                , Css.padding2 (Css.px 4) (Css.px 8)
                 , Css.width (Css.pct 100)
                 ]
             ]
-            [ Html.button [ Events.onClick Clear ] [ Html.text "Clear all" ] ]
+            [ Html.button
+                [ Events.onClick Clear
+                , Attrs.css
+                    [ Css.backgroundColor colors.buttonBackground
+                    , Css.color colors.buttonForeground
+                    , Css.padding2 (Css.px 4) (Css.px 8)
+                    , Css.hover
+                        [ Css.backgroundColor colors.primary
+                        ]
+                    ]
+                ]
+                [ Html.text "Clear all" ]
+            ]
         , Html.div
             [ Attrs.css
-                [ Css.paddingTop (Css.px 32)
-                , Css.paddingLeft (Css.px 8)
-                , Css.paddingRight (Css.px 8)
+                [ Css.padding <| Css.px 8
+                , Css.displayFlex
+                , Css.flexDirection Css.column
+                , Css.overflow Css.auto
                 ]
             ]
             messages
         ]
 
 
-main : Program Flags Model Msg
+main : Program Value Model Msg
 main =
     Browser.element
-        { init = init
+        { init = init << decodeFlags
         , update = update
         , view = view >> Html.toUnstyled
         , subscriptions = subscriptions

@@ -5,5 +5,6 @@
 body {
   font-family: 'IBM Plex Sans';
   color: $black;
-  background-color: $greyWhite;
+  display: flex;
+  flex-direction: column;
 }

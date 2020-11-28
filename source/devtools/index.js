@@ -5,11 +5,12 @@ import {Elm} from './Panel.elm';
 import {parse} from 'elm-debug-transformer';
 
 // init
+const theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
 // elm part
 const app = Elm.Panel.init({
   node: document.getElementById('debug-panel'),
-  flags: { }
+  flags: { theme: theme }
 });
 
 const tabId = String(browser.devtools.inspectedWindow.tabId);
@@ -30,12 +31,12 @@ window.addEventListener('beforeunload', function (e) {
 
 app.ports.bulkParse.subscribe((valuesToParse) => {
   // List (message, count)
-  const parsedValues = valuesToParse.map((value) => {
+  const parsedValues = valuesToParse.map(([{log, hash, time}, count]) => {
     return {
-      log: parse(value[0].log),
-      hash: value[0].hash,
-      timestamp: value[0].time,
-      count: value[1]
+      log: parse(log),
+      hash: hash,
+      timestamp: time,
+      count: count
       };
   });
 

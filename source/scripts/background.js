@@ -37,7 +37,7 @@ browser.runtime.onConnect.addListener((port)=>{
     ports[port.name] = port;
     comms[port.name] = true;
 
-    if(buffer[port.name].length > 0){
+    if(buffer[port.name]?.length > 0){
       port.postMessage({action: "FLUSH", data: buffer[port.name]});
       buffer[port.name] = new Array();
     }
