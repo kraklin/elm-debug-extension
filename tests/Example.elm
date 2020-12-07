@@ -107,6 +107,12 @@ fuzzString =
         |> Fuzz.map (\str -> ( Debug.toString str, ElmString str ))
 
 
+fuzzChar : Fuzzer ( String, ElmValue )
+fuzzChar =
+    Fuzz.char
+        |> Fuzz.map (\char -> ( Debug.toString char, ElmChar char ))
+
+
 fuzzValue : Fuzzer ( String, ElmValue )
 fuzzValue =
     Fuzz.oneOf
@@ -116,6 +122,7 @@ fuzzValue =
         , fuzzInternals
         , fuzzFunction
         , fuzzString
+        , fuzzChar
         ]
 
 
@@ -211,16 +218,62 @@ fuzzSequencesValues fn =
         , fn fuzzFunction
         , fn fuzzTuple
         , fn fuzzTriplet
+        , fn fuzzRecord
         ]
+
+
+fuzzVariableName : Fuzzer String
+fuzzVariableName =
+    let
+        lowerCaseGroup =
+            Fuzz.intRange 97 122
+                |> Fuzz.map Char.fromCode
+
+        upperCaseGroup =
+            Fuzz.intRange 65 90
+                |> Fuzz.map Char.fromCode
+
+        numberGroup =
+            Fuzz.intRange 48 57
+                |> Fuzz.map Char.fromCode
+
+        charsList =
+            Fuzz.oneOf [ lowerCaseGroup, upperCaseGroup, numberGroup, Fuzz.constant '_' ]
+                |> Fuzz.list
+                |> Fuzz.map String.fromList
+    in
+    Fuzz.map2 String.cons lowerCaseGroup charsList
+
+
+fuzzRecord : Fuzzer ( String, ElmValue )
+fuzzRecord =
+    let
+        fuzzRecordList =
+            Fuzz.list fuzzRecordEntry
+
+        fuzzRecordEntry =
+            Fuzz.tuple ( fuzzVariableName, fuzzValue )
+    in
+    Fuzz.map2
+        (\firstEntry list ->
+            (firstEntry :: list)
+                |> List.map
+                    (\( varName, ( valString, value ) ) ->
+                        ( varName ++ " = " ++ valString, ( varName, value ) )
+                    )
+                |> List.unzip
+                |> Tuple.mapFirst (\strList -> "{" ++ String.join ", " strList ++ "}")
+                |> Tuple.mapSecond (ElmRecord False)
+        )
+        fuzzRecordEntry
+        fuzzRecordList
 
 
 
 {- TODO:
-   - Chars
    - File
    - Bytes
    - Dict
-   - Record
    - Type/Custom Type
 -}
 
@@ -262,6 +315,11 @@ suite =
                 Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
                     (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
             )
+        , test "Parse nonstandard chars "
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
+                    (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+            )
         ]
 
 
@@ -300,5 +358,8 @@ fuzzSuite =
             checkParsing
         , fuzz (fuzzSequencesValues fuzzSetValue)
             "Set is parsed without problems"
+            checkParsing
+        , fuzz fuzzRecord
+            "Record is parsed without problems"
             checkParsing
         ]

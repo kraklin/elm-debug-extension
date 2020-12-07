@@ -10,6 +10,22 @@ type alias ParsedLog =
     }
 
 
+parseVariableName : Parser String
+parseVariableName =
+    P.getChompedString <|
+        P.succeed ()
+            |. P.chompIf Char.isLower
+            |. P.chompWhile (\c -> Char.isAlphaNum c || c == '_')
+
+
+parseTypeName : Parser String
+parseTypeName =
+    P.getChompedString <|
+        P.succeed ()
+            |. P.chompIf Char.isUpper
+            |. P.chompWhile (\c -> Char.isAlphaNum c || c == '_')
+
+
 parseBool : Parser ElmValue
 parseBool =
     P.succeed ElmBool
@@ -204,19 +220,70 @@ addHex char total =
 
 
 
+{--Char parser --}
+
+
+parseChar : Parser ElmValue
+parseChar =
+    P.oneOf
+        [ P.succeed identity
+            |. P.token "'\\''"
+            |> P.map (\_ -> ElmChar '\'')
+        , P.succeed identity
+            |. P.token "'"
+            |= P.getChompedString (P.chompUntil "'")
+            |. P.token "'"
+            |> P.map
+                (String.toList >> List.head >> Maybe.withDefault 'x' >> ElmChar)
+        ]
+
+
+
+{--Record parser --}
+
+
+parseRecord : Parser ElmValue
+parseRecord =
+    P.sequence
+        { start = "{"
+        , end = "}"
+        , separator = ","
+        , spaces = P.spaces
+        , item =
+            P.lazy
+                (\_ ->
+                    P.succeed Tuple.pair
+                        |= parseVariableName
+                        |. P.spaces
+                        |. P.token "="
+                        |. P.spaces
+                        |= parseValue
+                )
+        , trailing = P.Forbidden
+        }
+        |> P.map
+            (\listVal ->
+                ElmRecord False listVal
+            )
+
+
+
+{--Custom type parser --}
 {- Main value parser -}
 
 
 parseValue : Parser ElmValue
 parseValue =
     P.oneOf
-        [ parseKeywords
+        [ parseRecord
+        , parseKeywords
         , parseBool
         , parseNumber
         , parseTuple
         , parseArray
         , parseSet
         , parseList
+        , parseChar
         , parseString
         ]
 

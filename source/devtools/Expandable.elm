@@ -28,6 +28,7 @@ type SequenceType
 
 type ElmValue
     = ElmString String
+    | ElmChar Char
     | ElmInt Int
     | ElmFloat Float
     | ElmBool Bool
@@ -39,7 +40,7 @@ type ElmValue
     | ElmSequence SequenceType Bool (List ElmValue)
     | ElmTuple Bool (List ElmValue)
     | ElmRecord Bool (List ( String, ElmValue ))
-    | ElmType Bool String (Maybe (List ElmValue))
+    | ElmType Bool String (List ElmValue)
     | ElmDict Bool (List ( ElmValue, ElmValue ))
 
 
@@ -114,12 +115,12 @@ valueDecoder =
                     "Type" ->
                         Decode.succeed (ElmType False)
                             |> Decode.andMap (Decode.field "name" Decode.string)
-                            |> Decode.andMap (Decode.succeed Nothing)
+                            |> Decode.andMap (Decode.succeed [])
 
                     "Custom" ->
                         Decode.succeed (ElmType False)
                             |> Decode.andMap (Decode.field "name" Decode.string)
-                            |> Decode.andMap (Decode.maybe (Decode.field "value" (Decode.list valueDecoder)))
+                            |> Decode.andMap (Decode.field "value" (Decode.list valueDecoder))
 
                     "Dict" ->
                         Decode.succeed (ElmDict False)
@@ -180,8 +181,8 @@ hasNestedValues value =
         ElmDict _ values ->
             not <| List.isEmpty values
 
-        ElmType _ _ maybeValues ->
-            maybeValues /= Nothing
+        ElmType _ _ values ->
+            not <| List.isEmpty values
 
         _ ->
             False
@@ -202,16 +203,13 @@ toggle value =
         ElmDict isOpened values ->
             ElmDict (not isOpened) values
 
-        ElmType isOpened name maybeValues ->
-            case maybeValues of
-                Nothing ->
+        ElmType isOpened name values ->
+            case values of
+                [] ->
                     value
 
-                Just [] ->
-                    value
-
-                Just _ ->
-                    ElmType (not isOpened) name maybeValues
+                _ ->
+                    ElmType (not isOpened) name values
 
         _ ->
             value
@@ -234,13 +232,13 @@ map key fn value =
                 ElmDict a values ->
                     ElmDict a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
 
-                ElmType a b maybeValues ->
-                    case maybeValues of
-                        Nothing ->
+                ElmType a b typeValues ->
+                    case typeValues of
+                        [] ->
                             value
 
-                        Just values ->
-                            ElmType a b <| Just <| List.updateIfIndex ((==) mapIndex) mappedFn values
+                        values ->
+                            ElmType a b <| List.updateIfIndex ((==) mapIndex) mappedFn values
 
                 _ ->
                     value
@@ -348,21 +346,24 @@ viewValueHeader value =
                 []
                 [ Html.text <| "Dict (" ++ (String.fromInt <| List.length dictValues) ++ ")" ]
 
-        ElmType _ name maybeValues ->
-            case maybeValues of
-                Nothing ->
+        ElmType _ name values ->
+            case values of
+                [] ->
                     Html.text name
 
-                Just [ oneValue ] ->
+                [ oneValue ] ->
                     Html.span [] [ Html.text (name ++ " "), viewValueHeader oneValue ]
 
-                Just _ ->
+                _ ->
                     Html.span
                         []
                         [ Html.text name, Html.text " ..." ]
 
         ElmString str ->
             Html.span [ Attrs.css [ Css.color theme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
+
+        ElmChar str ->
+            Html.span [ Attrs.css [ Css.color theme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
         ElmFloat float ->
             Html.text <| String.fromFloat float ++ "f"
@@ -567,12 +568,12 @@ viewValue toggleMsg parentKey value =
                     Html.text ""
                 ]
 
-        ElmType isOpened name maybeValues ->
-            case maybeValues of
-                Nothing ->
+        ElmType isOpened name values ->
+            case values of
+                [] ->
                     Html.text name
 
-                Just [ oneValue ] ->
+                [ oneValue ] ->
                     Html.span []
                         [ viewValueHeader value
                         , if isOpened then
@@ -586,7 +587,7 @@ viewValue toggleMsg parentKey value =
                             Html.text ""
                         ]
 
-                Just multipleValues ->
+                multipleValues ->
                     if isOpened then
                         Html.span
                             [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
