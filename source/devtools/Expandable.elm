@@ -1,6 +1,7 @@
 module Expandable exposing
-    ( ElmValue
+    ( ElmValue(..)
     , Key
+    , SequenceType(..)
     , decodeParsedValue
     , logDecoder
     , map

@@ -21,6 +21,7 @@
     "build:firefox": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=firefox webpack",
     "build:opera": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=opera webpack",
     "build": "yarn run build:chrome && yarn run build:firefox && yarn run build:opera",
+    "test": "elm-test",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix"
   },
@@ -45,6 +46,7 @@
     "cross-env": "^7.0.2",
     "css-loader": "^3.5.3",
     "elm-hot-webpack-loader": "^1.1.7",
+    "elm-test": "^0.19.1-revision4",
     "eslint": "^6.8.0",
     "eslint-config-airbnb": "^18.1.0",
     "eslint-config-prettier": "^6.11.0",
