@@ -269,6 +269,61 @@ parseRecord =
 
 
 {--Custom type parser --}
+
+
+parseTypeWithoutValue : Parser ElmValue
+parseTypeWithoutValue =
+    parseTypeName
+        |> P.map
+            (\typeName ->
+                ElmType False typeName []
+            )
+
+
+
+{--Dict parser-}
+
+
+parseDict : Parser ElmValue
+parseDict =
+    let
+        parseComparable =
+            P.oneOf
+                [ parseBool
+                , parseNumber
+                , parseTuple
+                , parseChar
+                , parseString
+                ]
+    in
+    P.sequence
+        { start = "Dict.fromList ["
+        , end = "]"
+        , separator = ","
+        , spaces = P.spaces
+        , item =
+            P.lazy
+                (\_ ->
+                    P.succeed Tuple.pair
+                        |. P.token "("
+                        |. P.spaces
+                        |= parseComparable
+                        |. P.spaces
+                        |. P.token ","
+                        |. P.spaces
+                        |= parseValue
+                        |. P.spaces
+                        |. P.token ")"
+                )
+        , trailing = P.Forbidden
+        }
+        |> P.map
+            (\listVal ->
+                ElmDict False listVal
+            )
+
+
+
 {- Main value parser -}
 
 
@@ -277,12 +332,14 @@ parseValue =
     P.oneOf
         [ parseRecord
         , parseKeywords
-        , parseBool
-        , parseNumber
+        , P.backtrackable parseBool
+        , P.backtrackable parseNumber
         , parseTuple
         , parseArray
         , parseSet
+        , parseDict
         , parseList
+        , parseTypeWithoutValue
         , parseChar
         , parseString
         ]

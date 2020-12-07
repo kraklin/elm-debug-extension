@@ -123,6 +123,7 @@ fuzzValue =
         , fuzzFunction
         , fuzzString
         , fuzzChar
+        , fuzzTypeWithoutValue
         ]
 
 
@@ -169,6 +170,35 @@ fuzzTriplet =
                     (tripletValue next)
                     (tripletValue next)
         }
+
+
+fuzzTypeName : Fuzzer String
+fuzzTypeName =
+    let
+        lowerCaseGroup =
+            Fuzz.intRange 97 122
+                |> Fuzz.map Char.fromCode
+
+        upperCaseGroup =
+            Fuzz.intRange 65 90
+                |> Fuzz.map Char.fromCode
+
+        numberGroup =
+            Fuzz.intRange 48 57
+                |> Fuzz.map Char.fromCode
+
+        charsList =
+            Fuzz.oneOf [ lowerCaseGroup, upperCaseGroup, numberGroup, Fuzz.constant '_' ]
+                |> Fuzz.list
+                |> Fuzz.map String.fromList
+    in
+    Fuzz.map2 String.cons upperCaseGroup charsList
+
+
+fuzzTypeWithoutValue : Fuzzer ( String, ElmValue )
+fuzzTypeWithoutValue =
+    fuzzTypeName
+        |> Fuzz.map (\typeName -> ( typeName, ElmType False typeName [] ))
 
 
 fuzzListValue : Fuzzer ( String, ElmValue ) -> Fuzzer ( String, ElmValue )
@@ -219,6 +249,8 @@ fuzzSequencesValues fn =
         , fn fuzzTuple
         , fn fuzzTriplet
         , fn fuzzRecord
+
+        -- type
         ]
 
 
@@ -270,11 +302,37 @@ fuzzRecord =
 
 
 
+{--Dict --}
+
+
+fuzzDict : Fuzzer ( String, ElmValue )
+fuzzDict =
+    let
+        keyValue =
+            Fuzz.oneOf [ fuzzBool, fuzzNumber, fuzzString, fuzzChar, fuzzTuple ]
+
+        buildTuple ( fstStr, fstVal ) ( sndStr, sndVal ) =
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ( fstVal, sndVal ) )
+
+        fuzzDictVal : Fuzzer ( String, ( ElmValue, ElmValue ) )
+        fuzzDictVal =
+            Fuzz.map2 buildTuple keyValue fuzzValue
+    in
+    Fuzz.list fuzzDictVal
+        |> Fuzz.map
+            (\list ->
+                List.unzip list
+                    |> Tuple.mapFirst (\strList -> "Dict.fromList [" ++ String.join ", " strList ++ "]")
+                    |> Tuple.mapSecond (ElmDict False)
+            )
+
+
+
 {- TODO:
    - File
    - Bytes
    - Dict
-   - Type/Custom Type
+   - Custom Type w/ values and parens
 -}
 
 
@@ -320,6 +378,12 @@ suite =
                 Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
                     (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
             )
+        , only <|
+            test "complex output"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug with 2 numbers 7 chars like !_+))($ and emojis 💪: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }")
+                        (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
+                )
         ]
 
 
@@ -361,5 +425,8 @@ fuzzSuite =
             checkParsing
         , fuzz fuzzRecord
             "Record is parsed without problems"
+            checkParsing
+        , fuzz fuzzDict
+            "Simple Dict is parsed without problems"
             checkParsing
         ]
