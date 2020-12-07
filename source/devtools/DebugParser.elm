@@ -1,7 +1,7 @@
 module DebugParser exposing (..)
 
 import Expandable exposing (ElmValue(..), SequenceType(..))
-import Parser exposing ((|.), (|=), DeadEnd)
+import Parser as P exposing ((|.), (|=), DeadEnd, Parser, Step(..))
 
 
 type alias ParsedLog =
@@ -10,31 +10,31 @@ type alias ParsedLog =
     }
 
 
-parseBool : Parser.Parser ElmValue
+parseBool : Parser ElmValue
 parseBool =
-    Parser.succeed ElmBool
-        |= Parser.oneOf
-            [ Parser.map (\_ -> True) (Parser.keyword "True")
-            , Parser.map (\_ -> False) (Parser.keyword "False")
+    P.succeed ElmBool
+        |= P.oneOf
+            [ P.map (\_ -> True) (P.keyword "True")
+            , P.map (\_ -> False) (P.keyword "False")
             ]
 
 
-parseNumber : Parser.Parser ElmValue
+parseNumber : Parser ElmValue
 parseNumber =
-    Parser.oneOf
-        [ Parser.succeed (ElmFloat (0 / 0))
-            |. Parser.keyword "NaN"
-        , Parser.succeed (ElmFloat (1 / 0))
-            |. Parser.keyword "Infinity"
-        , Parser.succeed (ElmFloat -(1 / 0))
-            |. Parser.keyword "-Infinity"
-        , Parser.oneOf
-            [ Parser.succeed negate
-                |. Parser.symbol "-"
-                |= Parser.float
-            , Parser.float
+    P.oneOf
+        [ P.succeed (ElmFloat (0 / 0))
+            |. P.keyword "NaN"
+        , P.succeed (ElmFloat (1 / 0))
+            |. P.keyword "Infinity"
+        , P.succeed (ElmFloat -(1 / 0))
+            |. P.keyword "-Infinity"
+        , P.oneOf
+            [ P.succeed negate
+                |. P.symbol "-"
+                |= P.float
+            , P.float
             ]
-            |> Parser.map
+            |> P.map
                 (\num ->
                     if num == (round num |> toFloat) then
                         ElmInt (round num)
@@ -45,85 +45,171 @@ parseNumber =
         ]
 
 
-parseKeywords : Parser.Parser ElmValue
+parseKeywords : Parser ElmValue
 parseKeywords =
-    Parser.oneOf
-        [ Parser.succeed ElmUnit
-            |. Parser.keyword "()"
-        , Parser.succeed ElmInternals
-            |. Parser.keyword "<internals>"
-        , Parser.succeed ElmFunction
-            |. Parser.keyword "<function>"
+    P.oneOf
+        [ P.succeed ElmUnit
+            |. P.keyword "()"
+        , P.succeed ElmInternals
+            |. P.keyword "<internals>"
+        , P.succeed ElmFunction
+            |. P.keyword "<function>"
         ]
 
 
-parseTuple : Parser.Parser ElmValue
+parseTuple : Parser ElmValue
 parseTuple =
-    Parser.sequence
+    P.sequence
         { start = "("
         , end = ")"
         , separator = ","
-        , spaces = Parser.spaces
-        , item = Parser.lazy (\_ -> parseValue)
-        , trailing = Parser.Forbidden
+        , spaces = P.spaces
+        , item = P.lazy (\_ -> parseValue)
+        , trailing = P.Forbidden
         }
-        |> Parser.map
+        |> P.map
             (\listVal ->
                 ElmTuple False listVal
             )
 
 
-parseList : Parser.Parser ElmValue
+parseList : Parser ElmValue
 parseList =
-    Parser.sequence
+    P.sequence
         { start = "["
         , end = "]"
         , separator = ","
-        , spaces = Parser.spaces
-        , item = Parser.lazy (\_ -> parseValue)
-        , trailing = Parser.Forbidden
+        , spaces = P.spaces
+        , item = P.lazy (\_ -> parseValue)
+        , trailing = P.Forbidden
         }
-        |> Parser.map
+        |> P.map
             (\listVal ->
                 ElmSequence List False listVal
             )
 
 
-parseArray : Parser.Parser ElmValue
+parseArray : Parser ElmValue
 parseArray =
-    Parser.sequence
+    P.sequence
         { start = "Array.fromList ["
         , end = "]"
         , separator = ","
-        , spaces = Parser.spaces
-        , item = Parser.lazy (\_ -> parseValue)
-        , trailing = Parser.Forbidden
+        , spaces = P.spaces
+        , item = P.lazy (\_ -> parseValue)
+        , trailing = P.Forbidden
         }
-        |> Parser.map
+        |> P.map
             (\listVal ->
                 ElmSequence Array False listVal
             )
 
 
-parseSet : Parser.Parser ElmValue
+parseSet : Parser ElmValue
 parseSet =
-    Parser.sequence
+    P.sequence
         { start = "Set.fromList ["
         , end = "]"
         , separator = ","
-        , spaces = Parser.spaces
-        , item = Parser.lazy (\_ -> parseValue)
-        , trailing = Parser.Forbidden
+        , spaces = P.spaces
+        , item = P.lazy (\_ -> parseValue)
+        , trailing = P.Forbidden
         }
-        |> Parser.map
+        |> P.map
             (\listVal ->
                 ElmSequence Set False listVal
             )
 
 
-parseValue : Parser.Parser ElmValue
+
+{- ---- String parser ------ -}
+
+
+parseString : Parser ElmValue
+parseString =
+    P.succeed identity
+        |. P.token "\""
+        |= P.loop [] stringHelp
+        |> P.map ElmString
+
+
+stringHelp : List String -> Parser (Step (List String) String)
+stringHelp revChunks =
+    P.oneOf
+        [ P.succeed (\chunk -> Loop (chunk :: revChunks))
+            |. P.token "\\"
+            |= P.oneOf
+                [ P.map (\_ -> "\n") (P.token "n")
+                , P.map (\_ -> "\t") (P.token "t")
+                , P.map (\_ -> "\u{000D}") (P.token "r")
+                , P.map (\_ -> "\\") (P.token "\\")
+                , P.map (\_ -> "\"") (P.token "\"")
+                , P.succeed String.fromChar
+                    |. P.token "u{"
+                    |= unicode
+                    |. P.token "}"
+                ]
+        , P.token "\""
+            |> P.map (\_ -> Done (String.join "" (List.reverse revChunks)))
+        , P.chompWhile isUninteresting
+            |> P.getChompedString
+            |> P.map (\chunk -> Loop (chunk :: revChunks))
+        ]
+
+
+isUninteresting : Char -> Bool
+isUninteresting char =
+    char /= '\\' && char /= '"'
+
+
+unicode : Parser Char
+unicode =
+    P.getChompedString (P.chompWhile Char.isHexDigit)
+        |> P.andThen codeToChar
+
+
+codeToChar : String -> Parser Char
+codeToChar str =
+    let
+        length =
+            String.length str
+
+        code =
+            String.foldl addHex 0 str
+    in
+    if 4 <= length && length <= 6 then
+        P.problem "code point must have between 4 and 6 digits"
+
+    else if 0 <= code && code <= 0x0010FFFF then
+        P.succeed (Char.fromCode code)
+
+    else
+        P.problem "code point must be between 0 and 0x10FFFF"
+
+
+addHex : Char -> Int -> Int
+addHex char total =
+    let
+        code =
+            Char.toCode char
+    in
+    if 0x30 <= code && code <= 0x39 then
+        16 * total + (code - 0x30)
+
+    else if 0x41 <= code && code <= 0x46 then
+        16 * total + (10 + code - 0x41)
+
+    else
+        16 * total + (10 + code - 0x61)
+
+
+
+{- Main value parser -}
+
+
+parseValue : Parser ElmValue
 parseValue =
-    Parser.oneOf
+    P.oneOf
         [ parseKeywords
         , parseBool
         , parseNumber
@@ -131,16 +217,17 @@ parseValue =
         , parseArray
         , parseSet
         , parseList
+        , parseString
         ]
 
 
 parse : String -> Result (List DeadEnd) ParsedLog
 parse stringToParse =
-    Parser.run
-        (Parser.succeed ParsedLog
-            |= (Parser.getChompedString <| Parser.chompUntil ": ")
-            |. Parser.token ": "
+    P.run
+        (P.succeed ParsedLog
+            |= (P.getChompedString <| P.chompUntil ": ")
+            |. P.token ": "
             |= parseValue
-            |. Parser.end
+            |. P.end
         )
         stringToParse

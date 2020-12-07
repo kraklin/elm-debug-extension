@@ -101,6 +101,12 @@ fuzzFunction =
     Fuzz.constant ( "<function>", ElmFunction )
 
 
+fuzzString : Fuzzer ( String, ElmValue )
+fuzzString =
+    Fuzz.string
+        |> Fuzz.map (\str -> ( Debug.toString str, ElmString str ))
+
+
 fuzzValue : Fuzzer ( String, ElmValue )
 fuzzValue =
     Fuzz.oneOf
@@ -109,6 +115,7 @@ fuzzValue =
         , fuzzNumber
         , fuzzInternals
         , fuzzFunction
+        , fuzzString
         ]
 
 
@@ -209,7 +216,7 @@ fuzzSequencesValues fn =
 
 
 {- TODO:
-   - String
+   - Chars
    - File
    - Bytes
    - Dict
@@ -249,6 +256,11 @@ suite =
                                     False
                         )
                     |> Expect.equal (Ok True)
+            )
+        , test "Parse string with emoji"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
+                    (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
             )
         ]
 
