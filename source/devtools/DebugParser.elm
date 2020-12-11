@@ -64,9 +64,7 @@ parseNumber =
 parseKeywords : Parser ElmValue
 parseKeywords =
     P.oneOf
-        [ P.succeed ElmUnit
-            |. P.keyword "()"
-        , P.succeed ElmInternals
+        [ P.succeed ElmInternals
             |. P.keyword "<internals>"
         , P.succeed ElmFunction
             |. P.keyword "<function>"
@@ -75,18 +73,25 @@ parseKeywords =
 
 parseTuple : Parser ElmValue
 parseTuple =
-    P.sequence
-        { start = "("
-        , end = ")"
-        , separator = ","
-        , spaces = P.spaces
-        , item = P.lazy (\_ -> parseValue)
-        , trailing = P.Forbidden
-        }
-        |> P.map
-            (\listVal ->
-                ElmTuple False listVal
-            )
+    P.oneOf
+        [ P.succeed ElmUnit
+            |. P.keyword "()"
+        , P.backtrackable <|
+            P.succeed (\fst snd -> ElmTuple False [ fst, snd ])
+                |. P.token "("
+                |= P.lazy (\_ -> parseValue)
+                |. P.token ","
+                |= P.lazy (\_ -> parseValue)
+                |. P.token ")"
+        , P.succeed (\fst snd rd -> ElmTuple False [ fst, snd, rd ])
+            |. P.token "("
+            |= P.lazy (\_ -> parseValue)
+            |. P.token ","
+            |= P.lazy (\_ -> parseValue)
+            |. P.token ","
+            |= P.lazy (\_ -> parseValue)
+            |. P.token ")"
+        ]
 
 
 parseList : Parser ElmValue
@@ -146,10 +151,13 @@ parseString =
     P.succeed identity
         |. P.token "\""
         |= P.loop [] stringHelp
-        |> P.map ElmString
+        |> P.andThen
+            (Maybe.map (\str -> P.succeed (ElmString str))
+                >> Maybe.withDefault (P.problem "One string has no closing double quotes")
+            )
 
 
-stringHelp : List String -> Parser (Step (List String) String)
+stringHelp : List String -> Parser (Step (List String) (Maybe String))
 stringHelp revChunks =
     P.oneOf
         [ P.succeed (\chunk -> Loop (chunk :: revChunks))
@@ -165,11 +173,18 @@ stringHelp revChunks =
                     |= unicode
                     |. P.token "}"
                 ]
-        , P.token "\""
-            |> P.map (\_ -> Done (String.join "" (List.reverse revChunks)))
+        , P.oneOf
+            [ P.token "\""
+                |> P.map (\_ -> Done (Just <| String.join "" (List.reverse revChunks)))
+            , P.end
+                |> P.map (\_ -> Done Nothing)
+            ]
         , P.chompWhile isUninteresting
             |> P.getChompedString
-            |> P.map (\chunk -> Loop (chunk :: revChunks))
+            |> P.map
+                (\chunk ->
+                    Loop (chunk :: revChunks)
+                )
         ]
 
 
@@ -280,6 +295,33 @@ parseTypeWithoutValue =
             )
 
 
+parseCustomType : Parser ElmValue
+parseCustomType =
+    P.succeed (\name list -> ElmType False name (List.reverse list))
+        |= parseTypeName
+        |= P.loop [] typeHelp
+
+
+typeHelp : List ElmValue -> Parser (Step (List ElmValue) (List ElmValue))
+typeHelp values =
+    P.oneOf
+        [ P.succeed (\value -> Loop (value :: values))
+            |. P.token " "
+            |= parseCustomTypeValue
+        , P.succeed (Done values)
+        ]
+
+
+parseCustomTypeWithParens : Parser ElmValue
+parseCustomTypeWithParens =
+    P.succeed identity
+        |. P.token "("
+        |. P.spaces
+        |= parseCustomType
+        |. P.spaces
+        |. P.token ")"
+
+
 
 {--Dict parser-}
 
@@ -327,18 +369,47 @@ parseDict =
 {- Main value parser -}
 
 
-parseValue : Parser ElmValue
-parseValue =
+parseUnit : Parser ElmValue
+parseUnit =
+    P.succeed ElmUnit
+        |. P.keyword "()"
+
+
+parseCustomTypeValue : Parser ElmValue
+parseCustomTypeValue =
     P.oneOf
-        [ parseRecord
-        , parseKeywords
-        , P.backtrackable parseBool
-        , P.backtrackable parseNumber
-        , parseTuple
+        [ parseUnit
+        , parseRecord
         , parseArray
         , parseSet
         , parseDict
         , parseList
+        , P.backtrackable parseNumber
+        , P.backtrackable parseBool
+        , parseKeywords
+        , P.backtrackable parseCustomTypeWithParens
+        , parseTuple
+        , parseTypeWithoutValue
+        , parseChar
+        , parseString
+        ]
+
+
+parseValue : Parser ElmValue
+parseValue =
+    P.oneOf
+        [ parseUnit
+        , parseRecord
+        , parseArray
+        , parseSet
+        , parseDict
+        , parseList
+        , P.backtrackable parseNumber
+        , P.backtrackable parseBool
+        , parseKeywords
+        , P.backtrackable parseCustomTypeWithParens
+        , P.lazy (\_ -> parseCustomType)
+        , parseTuple
         , parseTypeWithoutValue
         , parseChar
         , parseString

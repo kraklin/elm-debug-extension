@@ -113,6 +113,40 @@ fuzzChar =
         |> Fuzz.map (\char -> ( Debug.toString char, ElmChar char ))
 
 
+fuzzCustomType : Fuzzer ( String, ElmValue )
+fuzzCustomType =
+    let
+        buildCustomType ( name, _ ) list =
+            List.unzip list
+                |> Tuple.mapFirst (\strList -> name ++ " " ++ String.join " " strList |> String.trim)
+                |> Tuple.mapSecond (ElmType False name)
+    in
+    recursiveFuzzer
+        { maxDepth = 3
+        , baseWeight = 1
+        , recurseWeight = always 0
+        , base =
+            Fuzz.map2 buildCustomType
+                fuzzTypeWithoutValue
+                (Fuzz.list fuzzCustomTypeValue)
+        , recurse = \_ -> fuzzCustomTypeValue
+        }
+
+
+fuzzCustomTypeValue : Fuzzer ( String, ElmValue )
+fuzzCustomTypeValue =
+    Fuzz.oneOf
+        [ fuzzBool
+        , fuzzUnit
+        , fuzzNumber
+        , fuzzInternals
+        , fuzzFunction
+        , fuzzString
+        , fuzzChar
+        , fuzzTypeWithoutValue
+        ]
+
+
 fuzzValue : Fuzzer ( String, ElmValue )
 fuzzValue =
     Fuzz.oneOf
@@ -124,6 +158,7 @@ fuzzValue =
         , fuzzString
         , fuzzChar
         , fuzzTypeWithoutValue
+        , fuzzCustomType
         ]
 
 
@@ -331,7 +366,6 @@ fuzzDict =
 {- TODO:
    - File
    - Bytes
-   - Dict
    - Custom Type w/ values and parens
 -}
 
@@ -344,9 +378,14 @@ suite =
                 Expect.equal (DebugParser.parse "Debug: True")
                     (Ok { tag = "Debug", value = ElmBool True })
             )
+        , test "Nested Tuple 2"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: (True,False)")
+                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmBool False ] })
+            )
         , test "Nested Tuple"
             (\_ ->
-                Expect.equal (DebugParser.parse "Debug: (True, (2, ()))")
+                Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
                     (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmInt 2, ElmUnit ] ] })
             )
         , test "Empty list"
@@ -368,6 +407,10 @@ suite =
                         )
                     |> Expect.equal (Ok True)
             )
+        , test "Parse string without closing quote fails"
+            (\_ ->
+                Expect.err (DebugParser.parse "Debug: \"Debug message")
+            )
         , test "Parse string with emoji"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
@@ -378,11 +421,43 @@ suite =
                 Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
                     (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
             )
-        , only <|
+        , describe "Multiple types"
+            [ test "Just boolean"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: Just True")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True ] })
+                )
+            , test "Multiple values "
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: Just True Nothing")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True, ElmType False "Nothing" [] ] })
+                )
+            , test "Multiple values with parentheses"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: Just (Just True)")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmType False "Just" [ ElmBool True ] ] })
+                )
+            , test "Multiple values with different types"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: Just True 12 \"string\" Nothing")
+                        (Ok
+                            { tag = "Debug"
+                            , value =
+                                ElmType False
+                                    "Just"
+                                    [ ElmBool True
+                                    , ElmInt 12
+                                    , ElmString "string"
+                                    , ElmType False "Nothing" []
+                                    ]
+                            }
+                        )
+                )
+            ]
+        , skip <|
             test "complex output"
                 (\_ ->
-                    Expect.equal (DebugParser.parse "Debug with 2 numbers 7 chars like !_+))($ and emojis 💪: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }")
-                        (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
+                    Expect.ok (DebugParser.parse "Debug with 2 numbers 7 chars like !_+))($ and emojis 💪: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }")
                 )
         ]
 
@@ -428,5 +503,8 @@ fuzzSuite =
             checkParsing
         , fuzz fuzzDict
             "Simple Dict is parsed without problems"
+            checkParsing
+        , fuzz fuzzCustomType
+            "Custom types"
             checkParsing
         ]
