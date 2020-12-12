@@ -269,9 +269,7 @@ parseRecord =
                 (\_ ->
                     P.succeed Tuple.pair
                         |= parseVariableName
-                        |. P.spaces
-                        |. P.token "="
-                        |. P.spaces
+                        |. P.token " = "
                         |= parseValue
                 )
         , trailing = P.Forbidden
@@ -297,29 +295,26 @@ parseTypeWithoutValue =
 
 parseCustomType : Parser ElmValue
 parseCustomType =
-    P.succeed (\name list -> ElmType False name (List.reverse list))
-        |= parseTypeName
-        |= P.loop [] typeHelp
+    P.oneOf
+        [ P.succeed (\name list -> ElmType False name (List.reverse list))
+            |= parseTypeName
+            |= P.loop [] typeHelp
+        ]
 
 
 typeHelp : List ElmValue -> Parser (Step (List ElmValue) (List ElmValue))
 typeHelp values =
     P.oneOf
-        [ P.succeed (\value -> Loop (value :: values))
-            |. P.token " "
-            |= parseCustomTypeValue
+        [ P.backtrackable <|
+            P.succeed (\value -> Loop (value :: values))
+                |. P.token " "
+                |= parseValue
+        , P.succeed (\value -> Loop (value :: values))
+            |. P.token " ("
+            |= parseValue
+            |. P.token ")"
         , P.succeed (Done values)
         ]
-
-
-parseCustomTypeWithParens : Parser ElmValue
-parseCustomTypeWithParens =
-    P.succeed identity
-        |. P.token "("
-        |. P.spaces
-        |= parseCustomType
-        |. P.spaces
-        |. P.token ")"
 
 
 
@@ -387,7 +382,6 @@ parseCustomTypeValue =
         , P.backtrackable parseNumber
         , P.backtrackable parseBool
         , parseKeywords
-        , P.backtrackable parseCustomTypeWithParens
         , parseTuple
         , parseTypeWithoutValue
         , parseChar
@@ -407,7 +401,6 @@ parseValue =
         , P.backtrackable parseNumber
         , P.backtrackable parseBool
         , parseKeywords
-        , P.backtrackable parseCustomTypeWithParens
         , P.lazy (\_ -> parseCustomType)
         , parseTuple
         , parseTypeWithoutValue
@@ -418,11 +411,12 @@ parseValue =
 
 parse : String -> Result (List DeadEnd) ParsedLog
 parse stringToParse =
-    P.run
-        (P.succeed ParsedLog
-            |= (P.getChompedString <| P.chompUntil ": ")
-            |. P.token ": "
-            |= parseValue
-            |. P.end
-        )
-        stringToParse
+    stringToParse
+        |> String.trim
+        |> P.run
+            (P.succeed ParsedLog
+                |= (P.getChompedString <| P.chompUntil ": ")
+                |. P.token ": "
+                |= parseValue
+                |. P.end
+            )
