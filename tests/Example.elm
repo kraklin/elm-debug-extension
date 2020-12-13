@@ -438,6 +438,11 @@ suite =
                     Expect.equal (DebugParser.parse "Debug: Just (Just True)")
                         (Ok { tag = "Debug", value = ElmType False "Just" [ ElmType False "Just" [ ElmBool True ] ] })
                 )
+            , test "Multiple values without parentheses"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: A A ()")
+                        (Ok { tag = "Debug", value = ElmType False "A" [ ElmType False "A" [], ElmUnit ] })
+                )
             , test "Multiple values with different types"
                 (\_ ->
                     Expect.equal (DebugParser.parse "Debug: Custom (Just True 12 \"string\" Nothing) Infinity -Infinity")
@@ -525,21 +530,14 @@ fuzzSuite =
                 Expect.equal (DebugParser.parse (tag ++ ": True"))
                     (Ok { tag = tag, value = ElmBool True })
             )
-        , only <|
-            fuzz fuzzValue
-                "Base value is parsed without problems"
-                checkParsing
+        , fuzz fuzzValue
+            "Base value is parsed without problems"
+            checkParsing
         , fuzz fuzzTuple
             "Tuple is parsed without problems"
             checkParsing
         , fuzz fuzzTriplet
             "Triplet is parsed without problems"
-            checkParsing
-        , fuzz (fuzzSequencesValues fuzzListValue)
-            "List is parsed without problems"
-            checkParsing
-        , fuzz (fuzzSequencesValues fuzzArrayValue)
-            "Array is parsed without problems"
             checkParsing
         , fuzz (fuzzSequencesValues fuzzSetValue)
             "Set is parsed without problems"

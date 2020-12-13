@@ -225,6 +225,29 @@ parseChar =
 {--Record parser --}
 
 
+parseTypeWithoutValue : Parser ElmValue
+parseTypeWithoutValue =
+    parseTypeName
+        |> P.map
+            (\name ->
+                case name of
+                    "True" ->
+                        ElmBool True
+
+                    "False" ->
+                        ElmBool False
+
+                    "NaN" ->
+                        ElmFloat (0 / 0)
+
+                    "Infinity" ->
+                        ElmFloat (1 / 0)
+
+                    _ ->
+                        ElmType False name []
+            )
+
+
 parseRecord : Parser ElmValue
 parseRecord =
     P.sequence
@@ -253,6 +276,29 @@ parseRecord =
 -- TODO: better parse the True and False to bool and not nested type...
 
 
+parseCustomTypeWithoutValue : Parser ElmValue
+parseCustomTypeWithoutValue =
+    P.succeed
+        (\name ->
+            case name of
+                "True" ->
+                    ElmBool True
+
+                "False" ->
+                    ElmBool False
+
+                "NaN" ->
+                    ElmFloat (0 / 0)
+
+                "Infinity" ->
+                    ElmFloat (1 / 0)
+
+                _ ->
+                    ElmType False name []
+        )
+        |= parseTypeName
+
+
 parseCustomType : Parser ElmValue
 parseCustomType =
     parseTypeName
@@ -272,7 +318,10 @@ parseCustomType =
                         P.succeed (ElmFloat (1 / 0))
 
                     _ ->
-                        P.succeed (\list -> ElmType False name (List.reverse list))
+                        P.succeed
+                            (\list ->
+                                ElmType False name (List.reverse list)
+                            )
                             |= P.loop [] typeHelp
             )
 
@@ -283,7 +332,7 @@ typeHelp values =
         [ P.backtrackable <|
             P.succeed (\value -> Loop (value :: values))
                 |. P.token " "
-                |= parseValue
+                |= parseValueWithoutCustomType
         , P.succeed (Done values)
         ]
 
@@ -372,6 +421,23 @@ parseUnit : Parser ElmValue
 parseUnit =
     P.succeed ElmUnit
         |. P.keyword "()"
+
+
+parseValueWithoutCustomType : Parser ElmValue
+parseValueWithoutCustomType =
+    P.oneOf
+        [ parseRecord
+        , parseArray
+        , parseSet
+        , parseDict
+        , parseList
+        , parseKeywords
+        , parseCustomTypeWithoutValue
+        , parseNumber
+        , parseValueWithParenthesis
+        , parseChar
+        , parseString
+        ]
 
 
 parseValue : Parser ElmValue
