@@ -26,15 +26,6 @@ parseTypeName =
             |. P.chompWhile (\c -> Char.isAlphaNum c || c == '_')
 
 
-parseBool : Parser ElmValue
-parseBool =
-    P.succeed ElmBool
-        |= P.oneOf
-            [ P.map (\_ -> True) (P.keyword "True")
-            , P.map (\_ -> False) (P.keyword "False")
-            ]
-
-
 parseNumber : Parser ElmValue
 parseNumber =
     P.oneOf
@@ -68,29 +59,6 @@ parseKeywords =
             |. P.keyword "<internals>"
         , P.succeed ElmFunction
             |. P.keyword "<function>"
-        ]
-
-
-parseTuple : Parser ElmValue
-parseTuple =
-    P.oneOf
-        [ P.succeed ElmUnit
-            |. P.keyword "()"
-        , P.backtrackable <|
-            P.succeed (\fst snd -> ElmTuple False [ fst, snd ])
-                |. P.token "("
-                |= P.lazy (\_ -> parseValue)
-                |. P.token ","
-                |= P.lazy (\_ -> parseValue)
-                |. P.token ")"
-        , P.succeed (\fst snd rd -> ElmTuple False [ fst, snd, rd ])
-            |. P.token "("
-            |= P.lazy (\_ -> parseValue)
-            |. P.token ","
-            |= P.lazy (\_ -> parseValue)
-            |. P.token ","
-            |= P.lazy (\_ -> parseValue)
-            |. P.token ")"
         ]
 
 
@@ -282,24 +250,25 @@ parseRecord =
 
 
 {--Custom type parser --}
-
-
-parseTypeWithoutValue : Parser ElmValue
-parseTypeWithoutValue =
-    parseTypeName
-        |> P.map
-            (\typeName ->
-                ElmType False typeName []
-            )
+-- TODO: better parse the True and False to bool and not nested type...
 
 
 parseCustomType : Parser ElmValue
 parseCustomType =
-    P.oneOf
-        [ P.succeed (\name list -> ElmType False name (List.reverse list))
-            |= parseTypeName
-            |= P.loop [] typeHelp
-        ]
+    parseTypeName
+        |> P.andThen
+            (\name ->
+                case name of
+                    "True" ->
+                        P.succeed (ElmBool True)
+
+                    "False" ->
+                        P.succeed (ElmBool False)
+
+                    _ ->
+                        P.succeed (\list -> ElmType False name (List.reverse list))
+                            |= P.loop [] typeHelp
+            )
 
 
 typeHelp : List ElmValue -> Parser (Step (List ElmValue) (List ElmValue))
@@ -309,12 +278,51 @@ typeHelp values =
             P.succeed (\value -> Loop (value :: values))
                 |. P.token " "
                 |= parseValue
-        , P.succeed (\value -> Loop (value :: values))
-            |. P.token " ("
-            |= parseValue
-            |. P.token ")"
         , P.succeed (Done values)
         ]
+
+
+parseValueWithParenthesis : Parser ElmValue
+parseValueWithParenthesis =
+    P.succeed identity
+        |. P.token "("
+        |= P.oneOf
+            [ P.succeed identity
+                |. P.spaces
+                |= P.lazy (\_ -> parseValue)
+                |> P.andThen
+                    (\fstValue ->
+                        P.oneOf
+                            [ P.succeed identity
+                                |. P.spaces
+                                |. P.token ","
+                                |. P.spaces
+                                |= P.lazy (\_ -> parseValue)
+                                |> P.andThen
+                                    (\sndValue ->
+                                        P.succeed identity
+                                            |= P.oneOf
+                                                [ -- ("x", "y", "z")
+                                                  P.succeed identity
+                                                    |. P.spaces
+                                                    |. P.token ","
+                                                    |. P.spaces
+                                                    |= P.lazy (\_ -> parseValue)
+                                                    |> P.map
+                                                        (\rdValue ->
+                                                            ElmTuple False [ fstValue, sndValue, rdValue ]
+                                                        )
+                                                , -- ("x", "y")
+                                                  P.succeed
+                                                    (ElmTuple False [ fstValue, sndValue ])
+                                                ]
+                                    )
+                            , P.succeed fstValue
+                            ]
+                    )
+            , P.succeed ElmUnit
+            ]
+        |. P.token ")"
 
 
 
@@ -323,16 +331,6 @@ typeHelp values =
 
 parseDict : Parser ElmValue
 parseDict =
-    let
-        parseComparable =
-            P.oneOf
-                [ parseBool
-                , parseNumber
-                , parseTuple
-                , parseChar
-                , parseString
-                ]
-    in
     P.sequence
         { start = "Dict.fromList ["
         , end = "]"
@@ -344,7 +342,7 @@ parseDict =
                     P.succeed Tuple.pair
                         |. P.token "("
                         |. P.spaces
-                        |= parseComparable
+                        |= P.lazy (\_ -> parseValue)
                         |. P.spaces
                         |. P.token ","
                         |. P.spaces
@@ -370,40 +368,20 @@ parseUnit =
         |. P.keyword "()"
 
 
-parseCustomTypeValue : Parser ElmValue
-parseCustomTypeValue =
-    P.oneOf
-        [ parseUnit
-        , parseRecord
-        , parseArray
-        , parseSet
-        , parseDict
-        , parseList
-        , P.backtrackable parseNumber
-        , P.backtrackable parseBool
-        , parseKeywords
-        , parseTuple
-        , parseTypeWithoutValue
-        , parseChar
-        , parseString
-        ]
-
-
 parseValue : Parser ElmValue
 parseValue =
     P.oneOf
-        [ parseUnit
-        , parseRecord
+        [ parseRecord
         , parseArray
         , parseSet
         , parseDict
         , parseList
+
+        -- backtrackable because of the NaN, Infinity and -Infinity
         , P.backtrackable parseNumber
-        , P.backtrackable parseBool
         , parseKeywords
         , P.lazy (\_ -> parseCustomType)
-        , parseTuple
-        , parseTypeWithoutValue
+        , parseValueWithParenthesis
         , parseChar
         , parseString
         ]
