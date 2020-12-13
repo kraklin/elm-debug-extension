@@ -36,7 +36,7 @@ recursiveFuzzer { maxDepth, baseWeight, recurseWeight, base, recurse } =
 fuzzTag : Fuzzer String
 fuzzTag =
     Fuzz.string
-        |> Fuzz.map (String.replace ": " "_")
+        |> Fuzz.map (String.trim >> String.replace ": " "_")
 
 
 fuzzBool : Fuzzer ( String, ElmValue )
@@ -373,134 +373,133 @@ fuzzDict =
 
 suite : Test
 suite =
-    only <|
-        describe "Parse"
-            [ test "Simple bolean value"
-                (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: True")
-                        (Ok { tag = "Debug", value = ElmBool True })
-                )
-            , test "Tuple"
-                (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: (True,False)")
-                        (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmBool False ] })
-                )
-            , test "Nested Tuple"
-                (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
-                        (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmInt 2, ElmUnit ] ] })
-                )
-            , test "Empty list"
-                (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: []")
-                        (Ok { tag = "Debug", value = ElmSequence List False [] })
-                )
-            , test "Parse NaN"
-                (\_ ->
-                    DebugParser.parse "Debug: NaN"
-                        |> Result.map
-                            (\parsed ->
-                                case parsed.value of
-                                    ElmFloat a ->
-                                        isNaN a
+    describe "Parse"
+        [ test "Simple bolean value"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: True")
+                    (Ok { tag = "Debug", value = ElmBool True })
+            )
+        , test "Tuple"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: (True,False)")
+                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmBool False ] })
+            )
+        , test "Nested Tuple"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
+                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmInt 2, ElmUnit ] ] })
+            )
+        , test "Empty list"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: []")
+                    (Ok { tag = "Debug", value = ElmSequence List False [] })
+            )
+        , test "Parse NaN"
+            (\_ ->
+                DebugParser.parse "Debug: NaN"
+                    |> Result.map
+                        (\parsed ->
+                            case parsed.value of
+                                ElmFloat a ->
+                                    isNaN a
 
-                                    _ ->
-                                        False
-                            )
-                        |> Expect.equal (Ok True)
-                )
-            , test "Parse string without closing quote fails"
+                                _ ->
+                                    False
+                        )
+                    |> Expect.equal (Ok True)
+            )
+        , test "Parse string without closing quote fails"
+            (\_ ->
+                Expect.err (DebugParser.parse "Debug: \"Debug message")
+            )
+        , test "Parse string with emoji"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
+                    (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
+            )
+        , test "Parse nonstandard chars "
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
+                    (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+            )
+        , describe "Multiple types"
+            [ test "Just boolean"
                 (\_ ->
-                    Expect.err (DebugParser.parse "Debug: \"Debug message")
+                    Expect.equal (DebugParser.parse "Debug: Just True")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True ] })
                 )
-            , test "Parse string with emoji"
+            , test "Multiple values "
                 (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
-                        (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
+                    Expect.equal (DebugParser.parse "Debug: Just True Nothing")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True, ElmType False "Nothing" [] ] })
                 )
-            , test "Parse nonstandard chars "
+            , test "Multiple values with parentheses"
                 (\_ ->
-                    Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
-                        (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+                    Expect.equal (DebugParser.parse "Debug: Just (Just True)")
+                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmType False "Just" [ ElmBool True ] ] })
                 )
-            , describe "Multiple types"
-                [ test "Just boolean"
-                    (\_ ->
-                        Expect.equal (DebugParser.parse "Debug: Just True")
-                            (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True ] })
-                    )
-                , test "Multiple values "
-                    (\_ ->
-                        Expect.equal (DebugParser.parse "Debug: Just True Nothing")
-                            (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True, ElmType False "Nothing" [] ] })
-                    )
-                , test "Multiple values with parentheses"
-                    (\_ ->
-                        Expect.equal (DebugParser.parse "Debug: Just (Just True)")
-                            (Ok { tag = "Debug", value = ElmType False "Just" [ ElmType False "Just" [ ElmBool True ] ] })
-                    )
-                , test "Multiple values with different types"
-                    (\_ ->
-                        Expect.equal (DebugParser.parse "Debug: Custom (Just True 12 \"string\" Nothing) Infinity -Infinity")
-                            (Ok
-                                { tag = "Debug"
-                                , value =
-                                    ElmType False
-                                        "Custom"
-                                        [ ElmType False
-                                            "Just"
-                                            [ ElmBool True
-                                            , ElmInt 12
-                                            , ElmString "string"
-                                            , ElmType False "Nothing" []
-                                            ]
-                                        , ElmFloat (1 / 0)
-                                        , ElmFloat -(1 / 0)
+            , test "Multiple values with different types"
+                (\_ ->
+                    Expect.equal (DebugParser.parse "Debug: Custom (Just True 12 \"string\" Nothing) Infinity -Infinity")
+                        (Ok
+                            { tag = "Debug"
+                            , value =
+                                ElmType False
+                                    "Custom"
+                                    [ ElmType False
+                                        "Just"
+                                        [ ElmBool True
+                                        , ElmInt 12
+                                        , ElmString "string"
+                                        , ElmType False "Nothing" []
                                         ]
-                                }
-                            )
-                    )
-                ]
-            , test "CustomType within custom type"
-                (\_ ->
-                    "msg: CrosstabBuilderStoreMsg (XBProjectsFetched { copiedFrom = Nothing })"
-                        |> DebugParser.parse
-                        |> Expect.equal
-                            (Ok
-                                { tag = "msg"
-                                , value =
-                                    ElmType False
-                                        "CrosstabBuilderStoreMsg"
-                                        [ ElmType False
-                                            "XBProjectsFetched"
-                                            [ ElmRecord False [ ( "copiedFrom", ElmType False "Nothing" [] ) ]
-                                            ]
-                                        ]
-                                }
-                            )
-                )
-            , test "Custom type with Dict value"
-                (\_ ->
-                    "msg: Leaf \"A\" (Dict.fromList [])"
-                        |> DebugParser.parse
-                        |> Expect.equal (Ok { tag = "msg", value = ElmType False "Leaf" [ ElmString "A", ElmDict False [] ] })
-                )
-            , test "problematic group"
-                (\_ ->
-                    "msg: Group (Dict.fromList [(\"city\",Value (String \"\"))])"
-                        |> DebugParser.parse
-                        |> Expect.equal
-                            (Ok
-                                { tag = "msg"
-                                , value =
-                                    ElmType False
-                                        "Group"
-                                        [ ElmDict False [ ( ElmString "city", ElmType False "Value" [ ElmType False "String" [ ElmString "" ] ] ) ]
-                                        ]
-                                }
-                            )
+                                    , ElmFloat (1 / 0)
+                                    , ElmFloat -(1 / 0)
+                                    ]
+                            }
+                        )
                 )
             ]
+        , test "CustomType within custom type"
+            (\_ ->
+                "msg: CrosstabBuilderStoreMsg (XBProjectsFetched { copiedFrom = Nothing })"
+                    |> DebugParser.parse
+                    |> Expect.equal
+                        (Ok
+                            { tag = "msg"
+                            , value =
+                                ElmType False
+                                    "CrosstabBuilderStoreMsg"
+                                    [ ElmType False
+                                        "XBProjectsFetched"
+                                        [ ElmRecord False [ ( "copiedFrom", ElmType False "Nothing" [] ) ]
+                                        ]
+                                    ]
+                            }
+                        )
+            )
+        , test "Custom type with Dict value"
+            (\_ ->
+                "msg: Leaf \"A\" (Dict.fromList [])"
+                    |> DebugParser.parse
+                    |> Expect.equal (Ok { tag = "msg", value = ElmType False "Leaf" [ ElmString "A", ElmDict False [] ] })
+            )
+        , test "problematic group"
+            (\_ ->
+                "msg: Group (Dict.fromList [(\"city\",Value (String \"\"))])"
+                    |> DebugParser.parse
+                    |> Expect.equal
+                        (Ok
+                            { tag = "msg"
+                            , value =
+                                ElmType False
+                                    "Group"
+                                    [ ElmDict False [ ( ElmString "city", ElmType False "Value" [ ElmType False "String" [ ElmString "" ] ] ) ]
+                                    ]
+                            }
+                        )
+            )
+        ]
 
 
 type Tree
@@ -526,9 +525,10 @@ fuzzSuite =
                 Expect.equal (DebugParser.parse (tag ++ ": True"))
                     (Ok { tag = tag, value = ElmBool True })
             )
-        , fuzz fuzzValue
-            "Base value is parsed without problems"
-            checkParsing
+        , only <|
+            fuzz fuzzValue
+                "Base value is parsed without problems"
+                checkParsing
         , fuzz fuzzTuple
             "Tuple is parsed without problems"
             checkParsing

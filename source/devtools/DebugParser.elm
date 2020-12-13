@@ -265,6 +265,12 @@ parseCustomType =
                     "False" ->
                         P.succeed (ElmBool False)
 
+                    "NaN" ->
+                        P.succeed (ElmFloat (0 / 0))
+
+                    "Infinity" ->
+                        P.succeed (ElmFloat (1 / 0))
+
                     _ ->
                         P.succeed (\list -> ElmType False name (List.reverse list))
                             |= P.loop [] typeHelp
@@ -376,11 +382,9 @@ parseValue =
         , parseSet
         , parseDict
         , parseList
-
-        -- backtrackable because of the NaN, Infinity and -Infinity
-        , P.backtrackable parseNumber
         , parseKeywords
         , P.lazy (\_ -> parseCustomType)
+        , parseNumber
         , parseValueWithParenthesis
         , parseChar
         , parseString
