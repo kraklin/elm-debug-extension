@@ -363,17 +363,9 @@ fuzzDict =
             )
 
 
-
-{- TODO:
-   - File
-   - Bytes
-   - Custom Type w/ values and parens
--}
-
-
 suite : Test
 suite =
-    describe "Parse"
+    describe "Parse" <|
         [ test "Simple bolean value"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: True")
@@ -393,6 +385,20 @@ suite =
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: []")
                     (Ok { tag = "Debug", value = ElmSequence List False [] })
+            )
+        , test "Parse bytes"
+            (\_ ->
+                "msg: <123 bytes>"
+                    |> DebugParser.parse
+                    |> Result.map .value
+                    |> Expect.equal (Ok (ElmBytes 123))
+            )
+        , test "Parse file"
+            (\_ ->
+                "msg: <filename>"
+                    |> DebugParser.parse
+                    |> Result.map .value
+                    |> Expect.equal (Ok (ElmFile "filename"))
             )
         , test "Parse NaN"
             (\_ ->
@@ -465,6 +471,11 @@ suite =
                         )
                 )
             ]
+        , test "Custom type at the end of record"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: { a = A }")
+                    (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "A" [] ) ] })
+            )
         , test "CustomType within custom type"
             (\_ ->
                 "msg: CrosstabBuilderStoreMsg (XBProjectsFetched { copiedFrom = Nothing })"
@@ -503,6 +514,12 @@ suite =
                                     ]
                             }
                         )
+            )
+        , test "real world example is parsed"
+            (\_ ->
+                "Debug with 2 numbers 7 chars like !_+))($ and emojis 💪 : { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = (), test = A { custom = B } }"
+                    |> DebugParser.parse
+                    |> Expect.ok
             )
         ]
 

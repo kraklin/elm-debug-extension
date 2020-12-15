@@ -46,7 +46,7 @@ update msg model =
             ( { model
                 | parsedValue =
                     DebugParser.parse model.input
-                        |> Debug.log "result"
+                        --|> Debug.log "result"
                         |> Result.toMaybe
               }
             , Cmd.none

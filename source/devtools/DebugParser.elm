@@ -118,15 +118,15 @@ parseString : Parser ElmValue
 parseString =
     P.succeed identity
         |. P.token "\""
-        |= P.loop [] stringHelp
+        |= P.loop [] (stringHelp "\"" isUninteresting)
         |> P.andThen
             (Maybe.map (\str -> P.succeed (ElmString str))
                 >> Maybe.withDefault (P.problem "One string has no closing double quotes")
             )
 
 
-stringHelp : List String -> Parser (Step (List String) (Maybe String))
-stringHelp revChunks =
+stringHelp : String -> (Char -> Bool) -> List String -> Parser (Step (List String) (Maybe String))
+stringHelp endString charCheckFn revChunks =
     P.oneOf
         [ P.succeed (\chunk -> Loop (chunk :: revChunks))
             |. P.token "\\"
@@ -134,6 +134,8 @@ stringHelp revChunks =
                 [ P.map (\_ -> "\n") (P.token "n")
                 , P.map (\_ -> "\t") (P.token "t")
                 , P.map (\_ -> "\u{000D}") (P.token "r")
+                , P.map (\_ -> "\u{000B}") (P.token "v")
+                , P.map (\_ -> "\u{0000}") (P.token "0")
                 , P.map (\_ -> "\\") (P.token "\\")
                 , P.map (\_ -> "\"") (P.token "\"")
                 , P.succeed String.fromChar
@@ -142,18 +144,29 @@ stringHelp revChunks =
                     |. P.token "}"
                 ]
         , P.oneOf
-            [ P.token "\""
+            [ P.token endString
                 |> P.map (\_ -> Done (Just <| String.join "" (List.reverse revChunks)))
             , P.end
                 |> P.map (\_ -> Done Nothing)
             ]
-        , P.chompWhile isUninteresting
+        , P.chompWhile charCheckFn
             |> P.getChompedString
             |> P.map
                 (\chunk ->
                     Loop (chunk :: revChunks)
                 )
         ]
+
+
+parseFile : Parser ElmValue
+parseFile =
+    P.succeed identity
+        |. P.token "<"
+        |= P.loop [] (stringHelp ">" (\c -> c /= '>'))
+        |> P.andThen
+            (Maybe.map (\str -> P.succeed (ElmFile str))
+                >> Maybe.withDefault (P.problem "File has no closing bracket")
+            )
 
 
 isUninteresting : Char -> Bool
@@ -271,9 +284,18 @@ parseRecord =
             )
 
 
+parseBytes : Parser ElmValue
+parseBytes =
+    -- TODO: the backtrackable can be removed with the combination of file parser
+    P.backtrackable <|
+        P.succeed ElmBytes
+            |. P.token "<"
+            |= P.int
+            |. P.token " bytes>"
+
+
 
 {--Custom type parser --}
--- TODO: better parse the True and False to bool and not nested type...
 
 
 parseCustomTypeWithoutValue : Parser ElmValue
@@ -437,6 +459,8 @@ parseValueWithoutCustomType =
         , parseValueWithParenthesis
         , parseChar
         , parseString
+        , parseBytes
+        , parseFile
         ]
 
 
@@ -450,10 +474,13 @@ parseValue =
         , parseList
         , parseKeywords
         , P.lazy (\_ -> parseCustomType)
+        , parseCustomTypeWithoutValue
         , parseNumber
         , parseValueWithParenthesis
         , parseChar
         , parseString
+        , parseBytes
+        , parseFile
         ]
 
 
