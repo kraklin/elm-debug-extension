@@ -2,6 +2,7 @@ port module Panel exposing (main)
 
 import Browser
 import Css
+import DebugParser
 import Dict
 import Expandable exposing (ElmValue)
 import Html.Events.Extra as Events
@@ -17,19 +18,7 @@ import Murmur3
 port logReceived : (( String, String ) -> msg) -> Sub msg
 
 
-port parse : ( Int, String ) -> Cmd msg
-
-
-port parsedReceived : (Value -> msg) -> Sub msg
-
-
 port bulkLogReceived : (Value -> msg) -> Sub msg
-
-
-port bulkParse : List ( BulkMessage, Int ) -> Cmd msg
-
-
-port bulkParsedReceived : (Value -> msg) -> Sub msg
 
 
 type Theme
@@ -96,8 +85,6 @@ type Msg
     = LogReceived ( String, String )
     | BulkLogReceived Value
     | Clear
-    | ParsedReceived Value
-    | BulkParsedReceived Value
     | Toggle Int Expandable.Key
 
 
@@ -132,16 +119,27 @@ update msg model =
                 hash =
                     messageHash log
 
-                ( messages, cmd ) =
+                messages =
                     if lastHash == Just hash then
-                        ( updateLastMessage isoTime model.messages, Cmd.none )
+                        updateLastMessage isoTime model.messages
 
                     else
-                        ( model.messages, parse ( hash, log ) )
-            in
-            ( { model | messages = messages }, cmd )
+                        case DebugParser.parse log of
+                            Ok { tag, value } ->
+                                { count = 1
+                                , tag = tag
+                                , value = value
+                                , hash = hash
+                                , isoTimestamp = isoTime
+                                }
+                                    :: model.messages
 
-        BulkLogReceived messages ->
+                            Err e ->
+                                model.messages
+            in
+            ( { model | messages = messages }, Cmd.none )
+
+        BulkLogReceived bulkMessages ->
             let
                 bulkMessageDecoder =
                     Decode.map2 (\t l -> BulkMessage t l (messageHash l))
@@ -152,20 +150,36 @@ update msg model =
                 decodedValues =
                     Decode.decodeValue
                         (Decode.list bulkMessageDecoder)
-                        messages
+                        bulkMessages
 
-                toParse =
+                messages : List DebugMessage
+                messages =
                     case decodedValues of
                         Ok values ->
                             values
                                 |> List.groupWhile (\v1 v2 -> v1.hash == v2.hash)
                                 |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
-                                |> bulkParse
+                                |> List.map
+                                    (\( { hash, log, time }, count ) ->
+                                        case DebugParser.parse log of
+                                            Ok { tag, value } ->
+                                                Just
+                                                    { count = count
+                                                    , tag = tag
+                                                    , value = value
+                                                    , hash = hash
+                                                    , isoTimestamp = time
+                                                    }
 
-                        Err err ->
-                            Cmd.none
+                                            Err _ ->
+                                                Nothing
+                                    )
+                                |> List.filterMap identity
+
+                        Err _ ->
+                            []
             in
-            ( model, toParse )
+            ( { model | messages = messages ++ model.messages }, Cmd.none )
 
         Clear ->
             ( { model
@@ -173,52 +187,6 @@ update msg model =
               }
             , Cmd.none
             )
-
-        ParsedReceived parsedValue ->
-            let
-                decodedValue =
-                    Expandable.decodeParsedValue parsedValue
-
-                messages =
-                    case decodedValue of
-                        Ok { hash, tag, isoTimestamp, value } ->
-                            { count = 1
-                            , tag = tag
-                            , value = value
-                            , hash = hash
-                            , isoTimestamp = isoTimestamp
-                            }
-                                :: model.messages
-
-                        Err e ->
-                            model.messages
-            in
-            ( { model | messages = messages }, Cmd.none )
-
-        BulkParsedReceived parsedValue ->
-            let
-                decoder =
-                    Decode.map2
-                        (\log count ->
-                            { count = count
-                            , tag = log.tag
-                            , value = log.value
-                            , hash = log.hash
-                            , isoTimestamp = log.isoTimestamp
-                            }
-                        )
-                        Expandable.logDecoder
-                        (Decode.field "count" Decode.int)
-
-                decodedMessages =
-                    case Decode.decodeValue (Decode.list decoder) parsedValue of
-                        Ok messages ->
-                            List.reverse messages ++ model.messages
-
-                        Err _ ->
-                            model.messages
-            in
-            ( { model | messages = decodedMessages }, Cmd.none )
 
         Toggle idx path ->
             let
@@ -244,8 +212,6 @@ subscriptions _ =
     Sub.batch
         [ logReceived LogReceived
         , bulkLogReceived BulkLogReceived
-        , parsedReceived ParsedReceived
-        , bulkParsedReceived BulkParsedReceived
         ]
 
 
