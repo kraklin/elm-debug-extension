@@ -2,8 +2,8 @@ port module Panel exposing (main)
 
 import Browser
 import Css
+import DebugMessages exposing (AddMessageData, DebugMessages)
 import DebugParser
-import Dict
 import Expandable exposing (ElmValue)
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
@@ -59,24 +59,8 @@ decodeFlags jsonValue =
         |> Result.withDefault defaultFlags
 
 
-type alias DebugMessage =
-    { count : Int
-    , tag : String
-    , value : ElmValue
-    , hash : Int
-    , isoTimestamp : String
-    }
-
-
-type alias BulkMessage =
-    { time : String
-    , log : String
-    , hash : Int
-    }
-
-
 type alias Model =
-    { messages : List DebugMessage
+    { messages : DebugMessages
     , flags : Flags
     }
 
@@ -85,126 +69,53 @@ type Msg
     = LogReceived ( String, String )
     | BulkLogReceived Value
     | Clear
-    | Toggle Int Expandable.Key
+    | Toggle DebugMessages.Key Expandable.Key
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( { messages = [], flags = flags }, Cmd.none )
-
-
-messageHash : String -> Int
-messageHash input =
-    Murmur3.hashString 1234 input
-
-
-updateLastMessage : String -> List DebugMessage -> List DebugMessage
-updateLastMessage isoTimestamp messages =
-    case messages of
-        [] ->
-            []
-
-        lastMessage :: rest ->
-            { lastMessage | count = lastMessage.count + 1, isoTimestamp = isoTimestamp } :: rest
+    ( { messages = DebugMessages.empty, flags = flags }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LogReceived ( isoTime, log ) ->
-            let
-                lastHash =
-                    List.head model.messages |> Maybe.map .hash
-
-                hash =
-                    messageHash log
-
-                messages =
-                    if lastHash == Just hash then
-                        updateLastMessage isoTime model.messages
-
-                    else
-                        case DebugParser.parse log of
-                            Ok { tag, value } ->
-                                { count = 1
-                                , tag = tag
-                                , value = value
-                                , hash = hash
-                                , isoTimestamp = isoTime
-                                }
-                                    :: model.messages
-
-                            Err e ->
-                                model.messages
-            in
-            ( { model | messages = messages }, Cmd.none )
+            ( { model | messages = DebugMessages.add (AddMessageData isoTime log) model.messages }, Cmd.none )
 
         BulkLogReceived bulkMessages ->
             let
                 bulkMessageDecoder =
-                    Decode.map2 (\t l -> BulkMessage t l (messageHash l))
+                    Decode.map2 AddMessageData
                         (Decode.field "time" Decode.string)
                         (Decode.field "log" Decode.string)
 
-                decodedValues : Result Decode.Error (List BulkMessage)
+                decodedValues : Result Decode.Error (List AddMessageData)
                 decodedValues =
                     Decode.decodeValue
                         (Decode.list bulkMessageDecoder)
                         bulkMessages
 
-                messages : List DebugMessage
+                messages : DebugMessages
                 messages =
                     case decodedValues of
                         Ok values ->
-                            values
-                                |> List.groupWhile (\v1 v2 -> v1.hash == v2.hash)
-                                |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
-                                |> List.map
-                                    (\( { hash, log, time }, count ) ->
-                                        case DebugParser.parse log of
-                                            Ok { tag, value } ->
-                                                Just
-                                                    { count = count
-                                                    , tag = tag
-                                                    , value = value
-                                                    , hash = hash
-                                                    , isoTimestamp = time
-                                                    }
-
-                                            Err _ ->
-                                                Nothing
-                                    )
-                                |> List.filterMap identity
+                            DebugMessages.bulkAdd values model.messages
 
                         Err _ ->
-                            []
+                            model.messages
             in
-            ( { model | messages = messages ++ model.messages }, Cmd.none )
+            ( { model | messages = messages }, Cmd.none )
 
         Clear ->
             ( { model
-                | messages = []
+                | messages = DebugMessages.empty
               }
             , Cmd.none
             )
 
-        Toggle idx path ->
-            let
-                updatedMessages =
-                    List.indexedMap
-                        (\messageIndex message ->
-                            if messageIndex == idx then
-                                { message | value = updatedElmValue message.value }
-
-                            else
-                                message
-                        )
-                        model.messages
-
-                updatedElmValue val =
-                    Expandable.map path Expandable.toggle val
-            in
-            ( { model | messages = updatedMessages }, Cmd.none )
+        Toggle key path ->
+            ( { model | messages = DebugMessages.toggleValue key path model.messages }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -258,9 +169,9 @@ view model =
             themeColors model.flags.theme
 
         messages =
-            model.messages
-                |> List.indexedMap
-                    (\idx { tag, value, count, hash } ->
+            DebugMessages.messages model.messages
+                |> List.map
+                    (\{ tag, value, count, key } ->
                         Html.div
                             [ Attrs.css
                                 [ Css.marginBottom (Css.px 12)
@@ -269,9 +180,8 @@ view model =
                                 , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
-                            [ Expandable.viewMessageHeader (Toggle idx) count tag value ]
+                            [ Expandable.viewMessageHeader (Toggle key) count tag value ]
                     )
-                |> List.reverse
     in
     Html.styled Html.div
         [ Css.fontSize <| Css.px 12

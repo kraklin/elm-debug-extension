@@ -495,3 +495,16 @@ parse stringToParse =
                 |= parseValue
                 |. P.end
             )
+
+
+parseWithOptionalTag : String -> Result (List DeadEnd) ParsedLog
+parseWithOptionalTag stringToParse =
+    stringToParse
+        |> String.trim
+        |> P.run
+            (P.succeed (ParsedLog "Debug message")
+                |. (P.getChompedString <| P.chompUntil ": ")
+                |. P.token ": "
+                |= parseValue
+                |. P.end
+            )
