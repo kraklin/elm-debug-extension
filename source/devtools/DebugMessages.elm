@@ -90,33 +90,39 @@ add { timestamp, log } (DebugMessages data) =
 
 bulkAdd : List AddMessageData -> DebugMessages -> DebugMessages
 bulkAdd bulkList (DebugMessages data) =
-    Debug.todo "add bulk messages"
+    let
+        parsedMessages =
+            bulkList
+                |> List.map (\messageData -> ( messageHash messageData.log, messageData ))
+                |> List.groupWhile (\v1 v2 -> Tuple.first v1 == Tuple.first v2)
+                |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
+                |> List.map
+                    (\( ( hash, { log, timestamp } ), count ) ->
+                        case DebugParser.parse log of
+                            Ok { tag, value } ->
+                                Just
+                                    { count = count
+                                    , tag = tag
+                                    , value = value
+                                    , hash = hash
+                                    , timestamp = timestamp
+                                    }
 
+                            Err _ ->
+                                Nothing
+                    )
+                |> List.filterMap identity
 
+        newStore =
+            parsedMessages
+                |> List.map (\{ tag, value, hash, timestamp } -> ( ( hash, timestamp ), { tag = tag, value = value } ))
+                |> Dict.fromList
+                |> Dict.union data.store
 
--- DebugMessages data
-{-
-
-   |> List.groupWhile (\v1 v2 -> v1.hash == v2.hash)
-   |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
-   |> List.map
-       (\( { hash, log, time }, count ) ->
-           case DebugParser.parse log of
-               Ok { tag, value } ->
-                   Just
-                       { count = count
-                       , tag = tag
-                       , value = value
-                       , hash = hash
-                       , isoTimestamp = time
-                       }
-
-               Err _ ->
-                   Nothing
-       )
-   |> List.filterMap identity
-
--}
+        newQueue =
+            parsedMessages |> List.map (\{ hash, timestamp, count } -> ( ( hash, timestamp ), count ))
+    in
+    DebugMessages { data | store = newStore, queue = newQueue ++ data.queue }
 
 
 messages : DebugMessages -> List DebugMessage

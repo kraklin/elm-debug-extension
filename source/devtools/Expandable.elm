@@ -258,24 +258,25 @@ map key fn value =
 -- VIEW --
 
 
-theme =
-    { stringColor = Css.hex "0000ff"
-    , internalsColor = Css.hex "808080"
-    , keysColor = Css.hex "ff00ff"
-    , guidelinesColor = Css.hex "a0a0a0"
-    , expandTriangleColor = Css.hex "808080"
+type alias ColorTheme a =
+    { a
+        | stringColor : Css.Color
+        , internalsColor : Css.Color
+        , keysColor : Css.Color
+        , guidelinesColor : Css.Color
+        , expandTriangleColor : Css.Color
     }
 
 
-viewValueHeader : ElmValue -> Html msg
-viewValueHeader value =
+viewValueHeader : ColorTheme a -> ElmValue -> Html msg
+viewValueHeader colorTheme value =
     case value of
         ElmTuple _ children ->
             Html.span []
                 [ Html.span []
                     [ Html.text "("
                     , Html.span []
-                        (List.map viewValueHeader children
+                        (List.map (viewValueHeader colorTheme) children
                             |> List.intersperse (Html.text ", ")
                         )
                     , Html.text ")"
@@ -308,7 +309,7 @@ viewValueHeader value =
 
                         else
                             [ Html.text "[ "
-                            , viewValueHeader singleton
+                            , viewValueHeader colorTheme singleton
                             , Html.text " ]"
                             ]
 
@@ -325,18 +326,18 @@ viewValueHeader value =
                     [ ( name, singleValue ) ] ->
                         Html.span []
                             [ Html.text "{"
-                            , Html.span [ Attrs.css [ Css.color theme.keysColor ] ] [ Html.text name ]
+                            , Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ] [ Html.text name ]
                             , Html.text ": "
-                            , viewValueHeader singleValue
+                            , viewValueHeader colorTheme singleValue
                             , Html.text "}"
                             ]
 
                     ( name, firstItem ) :: _ ->
                         Html.span []
                             [ Html.text "{"
-                            , Html.span [ Attrs.css [ Css.color theme.keysColor ] ] [ Html.text name ]
+                            , Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ] [ Html.text name ]
                             , Html.text ": "
-                            , viewValueHeader firstItem
+                            , viewValueHeader colorTheme firstItem
                             , Html.text ", ...}"
                             ]
                 ]
@@ -352,7 +353,7 @@ viewValueHeader value =
                     Html.text name
 
                 [ oneValue ] ->
-                    Html.span [] [ Html.text (name ++ " "), viewValueHeader oneValue ]
+                    Html.span [] [ Html.text (name ++ " "), viewValueHeader colorTheme oneValue ]
 
                 _ ->
                     Html.span
@@ -360,10 +361,10 @@ viewValueHeader value =
                         [ Html.text name, Html.text " ..." ]
 
         ElmString str ->
-            Html.span [ Attrs.css [ Css.color theme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
+            Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
 
         ElmChar str ->
-            Html.span [ Attrs.css [ Css.color theme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
+            Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
         ElmFloat float ->
             Html.text <| String.fromFloat float ++ "f"
@@ -380,11 +381,11 @@ viewValueHeader value =
                     "False"
 
         ElmInternals ->
-            Html.span [ Attrs.css [ Css.color theme.internalsColor ] ]
+            Html.span [ Attrs.css [ Css.color colorTheme.internalsColor ] ]
                 [ Html.text "<internals>" ]
 
         ElmFunction ->
-            Html.span [ Attrs.css [ Css.color theme.internalsColor ] ]
+            Html.span [ Attrs.css [ Css.color colorTheme.internalsColor ] ]
                 [ Html.text "<function>" ]
 
         ElmUnit ->
@@ -419,17 +420,18 @@ isValueOpened value =
             False
 
 
-toggableDiv child toggleAttribute content =
+toggableDiv colorTheme child toggleAttribute content =
     if hasNestedValues child then
-        Html.div [ toggleAttribute ] <|
+        Html.div [] <|
             Html.span []
                 [ Html.span
                     [ Attrs.css
                         [ Css.display Css.inlineBlock
                         , Css.cursor Css.pointer
                         , Css.width (Css.px 12)
-                        , Css.color theme.expandTriangleColor
+                        , Css.color colorTheme.expandTriangleColor
                         ]
+                    , toggleAttribute
                     ]
                     [ if isValueOpened child then
                         Html.text "▾"
@@ -444,8 +446,8 @@ toggableDiv child toggleAttribute content =
         Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] content
 
 
-viewMessageHeader : (Key -> msg) -> Int -> String -> ElmValue -> Html msg
-viewMessageHeader toggleMsg count tag value =
+viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> ElmValue -> Html msg
+viewMessageHeader colorTheme toggleMsg count tag value =
     let
         viewCount =
             if count > 1 then
@@ -469,30 +471,31 @@ viewMessageHeader toggleMsg count tag value =
     Html.div []
         [ viewCount
         , Html.text tag
-        , toggableDiv value
+        , toggableDiv colorTheme
+            value
             (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
-            [ viewValue toggleMsg [] value ]
+            [ viewValue colorTheme toggleMsg [] value ]
         ]
 
 
-viewValue : (Key -> msg) -> Key -> ElmValue -> Html msg
-viewValue toggleMsg parentKey value =
+viewValue : ColorTheme a -> (Key -> msg) -> Key -> ElmValue -> Html msg
+viewValue colorTheme toggleMsg parentKey value =
     let
         viewChildFn idx v =
-            Html.span [] [ viewValue toggleMsg (parentKey ++ [ idx ]) v ]
+            Html.span [] [ viewValue colorTheme toggleMsg (parentKey ++ [ idx ]) v ]
 
         toggleCurrent idx =
             Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ])
 
         viewFn =
-            viewValue toggleMsg parentKey
+            viewValue colorTheme toggleMsg parentKey
 
         childrenWrapper attrs children =
             Html.div
                 ([ Attrs.css
                     [ Css.paddingLeft (Css.em 1)
                     , Css.marginLeft (Css.px 3)
-                    , Css.borderLeft3 (Css.px 1) Css.solid theme.guidelinesColor
+                    , Css.borderLeft3 (Css.px 1) Css.solid colorTheme.guidelinesColor
                     ]
                  ]
                     ++ attrs
@@ -502,12 +505,12 @@ viewValue toggleMsg parentKey value =
     case value of
         ElmTuple isOpened children ->
             Html.span []
-                [ viewValueHeader value
+                [ viewValueHeader colorTheme value
                 , if isOpened then
                     childrenWrapper [] <|
                         List.indexedMap
                             (\idx child ->
-                                toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
+                                toggableDiv colorTheme child (toggleCurrent idx) [ viewChildFn idx child ]
                             )
                             children
 
@@ -517,12 +520,12 @@ viewValue toggleMsg parentKey value =
 
         ElmSequence _ isOpened children ->
             Html.span []
-                [ viewValueHeader value
+                [ viewValueHeader colorTheme value
                 , if isOpened then
                     childrenWrapper [] <|
                         List.indexedMap
                             (\idx child ->
-                                toggableDiv child (toggleCurrent idx) [ viewChildFn idx child ]
+                                toggableDiv colorTheme child (toggleCurrent idx) [ viewChildFn idx child ]
                             )
                             children
 
@@ -532,14 +535,15 @@ viewValue toggleMsg parentKey value =
 
         ElmRecord isOpened recordValues ->
             Html.span []
-                [ viewValueHeader value
+                [ viewValueHeader colorTheme value
                 , if isOpened then
                     recordValues
                         |> List.indexedMap
                             (\idx ( key, child ) ->
-                                toggableDiv child
+                                toggableDiv colorTheme
+                                    child
                                     (toggleCurrent idx)
-                                    [ Html.span [ Attrs.css [ Css.color theme.keysColor ] ]
+                                    [ Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ]
                                         [ Html.text key ]
                                     , Html.text ": "
                                     , viewChildFn idx child
@@ -553,12 +557,13 @@ viewValue toggleMsg parentKey value =
 
         ElmDict isOpened dictValues ->
             Html.span []
-                [ viewValueHeader value
+                [ viewValueHeader colorTheme value
                 , if isOpened then
                     childrenWrapper [] <|
                         List.indexedMap
                             (\idx ( key, dictValue ) ->
-                                toggableDiv dictValue
+                                toggableDiv colorTheme
+                                    dictValue
                                     (toggleCurrent idx)
                                     [ viewFn key, Html.text ": ", viewChildFn idx dictValue ]
                             )
@@ -575,10 +580,11 @@ viewValue toggleMsg parentKey value =
 
                 [ oneValue ] ->
                     Html.span []
-                        [ viewValueHeader value
+                        [ viewValueHeader colorTheme value
                         , if isOpened then
                             childrenWrapper [] <|
-                                [ toggableDiv oneValue
+                                [ toggableDiv colorTheme
+                                    oneValue
                                     (toggleCurrent 0)
                                     [ viewChildFn 0 oneValue ]
                                 ]
@@ -593,7 +599,7 @@ viewValue toggleMsg parentKey value =
                             [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
                             [ Html.text name
                             , childrenWrapper [] <|
-                                List.indexedMap (\idx c -> toggableDiv c (toggleCurrent idx) [ viewChildFn idx c ]) multipleValues
+                                List.indexedMap (\idx c -> toggableDiv colorTheme c (toggleCurrent idx) [ viewChildFn idx c ]) multipleValues
                             ]
 
                     else
@@ -602,4 +608,4 @@ viewValue toggleMsg parentKey value =
                             [ Html.text name, Html.text " ..." ]
 
         _ ->
-            viewValueHeader value
+            viewValueHeader colorTheme value
