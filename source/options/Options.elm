@@ -135,8 +135,7 @@ init flags =
 
 
 type Msg
-    = NoOp
-    | SetDebug Bool
+    = SetDebug Bool
     | SetSimpleMode Mode
     | UpdateLimitForm String
     | ValidateForm
@@ -156,9 +155,6 @@ update msg model =
             model.form
     in
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
-
         SetDebug newDebug ->
             ( setFormValue { modelForm | debug = newDebug }, Cmd.none )
 
@@ -243,8 +239,8 @@ red =
     Element.rgb255 181 75 59
 
 
-header : String -> Element Msg
-header version =
+header : Element Msg
+header =
     Element.row
         [ Element.width Element.fill
         , Element.spacing 8
@@ -514,7 +510,7 @@ content model =
             , Element.centerX
             , Element.spacing 16
             ]
-            [ header model.flags.version
+            [ header
             , parserLimitSettings limitErrors model.form.limit
             , if model.flags.hasCustomFormatters then
                 simpleModeSettings model.form.mode
@@ -549,7 +545,7 @@ view model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     globalsSavedResult GlobalsSavedResult
 
 

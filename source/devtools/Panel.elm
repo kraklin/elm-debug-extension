@@ -3,8 +3,7 @@ port module Panel exposing (main)
 import Browser
 import Css
 import DebugMessages exposing (AddMessageData, DebugMessages)
-import DebugParser
-import Expandable exposing (ElmValue)
+import Expandable
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
@@ -12,7 +11,6 @@ import Html.Styled.Events as Events
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
-import Murmur3
 
 
 port logReceived : (( String, String ) -> msg) -> Sub msg

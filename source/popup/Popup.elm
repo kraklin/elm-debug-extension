@@ -52,8 +52,7 @@ init flags =
 
 
 type Msg
-    = NoOp
-    | UpdateOptions DebugOptions
+    = UpdateOptions DebugOptions
     | OpenOptionsPage
     | ToggleDebug
 
@@ -61,9 +60,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
-
         UpdateOptions newOptions ->
             ( { model | options = newOptions }, Cmd.none )
 
@@ -323,7 +319,7 @@ view model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     receive UpdateOptions
 
 

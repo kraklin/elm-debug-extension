@@ -1,18 +1,12 @@
 module Main exposing (main)
 
 import Browser
-import Css
 import DebugParser
-import Dict
-import Expandable exposing (ElmValue)
+import Expandable
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
-import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events
-import Json.Decode as Decode exposing (Value)
-import Json.Decode.Extra as Decode
-import List.Extra as List
-import Murmur3
+import Json.Decode exposing (Value)
 
 
 type alias Model =
@@ -22,8 +16,7 @@ type alias Model =
 
 
 type Msg
-    = NoOp
-    | Toggle Expandable.Key
+    = Toggle Expandable.Key
     | InputChanged String
     | DoTheMagic
 
@@ -46,7 +39,6 @@ update msg model =
             ( { model
                 | parsedValue =
                     DebugParser.parse model.input
-                        --|> Debug.log "result"
                         |> Result.toMaybe
               }
             , Cmd.none
@@ -77,7 +69,7 @@ view model =
         , Html.textarea [ Events.onInput InputChanged ] []
         , Html.button [ Events.onClick DoTheMagic ] [ Html.text "Do the magic" ]
         , Html.div []
-            [ Maybe.map (\parsed -> Expandable.viewMessageHeader Toggle 1 parsed.tag parsed.value) model.parsedValue |> Maybe.withDefault (Html.text model.input)
+            [ Maybe.map (\parsed -> Expandable.viewMessageHeader Toggle 1 parsed.tag parsed.value) model.parsedValue |> Maybe.withDefault (Html.text "")
             ]
         ]
 

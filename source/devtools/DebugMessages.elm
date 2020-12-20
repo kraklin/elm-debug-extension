@@ -84,7 +84,7 @@ add { timestamp, log } (DebugMessages data) =
                     , queue = ( dictKey, 1 ) :: data.queue
                     }
 
-            Err e ->
+            Err _ ->
                 DebugMessages data
 
 

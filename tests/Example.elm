@@ -524,17 +524,9 @@ suite =
         ]
 
 
-type Tree
-    = Leaf String (Dict.Dict Int String)
-    | Node Tree Tree
-
-
 fuzzSuite : Test
 fuzzSuite =
     let
-        debug ( str, val ) =
-            ( Debug.log "" str, val )
-
         checkParsing ( str, val ) =
             DebugParser.parse (": " ++ str)
                 |> Result.map .value
