@@ -120,7 +120,8 @@ bulkAdd bulkList (DebugMessages data) =
                 |> Dict.union data.store
 
         newQueue =
-            parsedMessages |> List.map (\{ hash, timestamp, count } -> ( ( hash, timestamp ), count ))
+            parsedMessages
+                |> List.map (\{ hash, timestamp, count } -> ( ( hash, timestamp ), count ))
     in
     DebugMessages { data | store = newStore, queue = newQueue ++ data.queue }
 
@@ -145,16 +146,14 @@ messages (DebugMessages data) =
 
 toggleValue : Key -> Expandable.Key -> DebugMessages -> DebugMessages
 toggleValue key path (DebugMessages data) =
+    let
+        toggleValue_ storeMessage =
+            { storeMessage
+                | value = Expandable.map path Expandable.toggle storeMessage.value
+            }
+    in
     DebugMessages
         { data
             | store =
-                Dict.update key
-                    (Maybe.map
-                        (\storeMessage ->
-                            { storeMessage
-                                | value = Expandable.map path Expandable.toggle storeMessage.value
-                            }
-                        )
-                    )
-                    data.store
+                Dict.update key (Maybe.map toggleValue_) data.store
         }

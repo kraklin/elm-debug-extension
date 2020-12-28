@@ -11,6 +11,7 @@ import Html.Styled.Events as Events
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
+import Theme exposing (Theme)
 
 
 port logReceived : (( String, String ) -> msg) -> Sub msg
@@ -19,18 +20,13 @@ port logReceived : (( String, String ) -> msg) -> Sub msg
 port bulkLogReceived : (Value -> msg) -> Sub msg
 
 
-type Theme
-    = Light
-    | Dark
-
-
 type alias Flags =
     { theme : Theme }
 
 
 defaultFlags : Flags
 defaultFlags =
-    { theme = Light
+    { theme = Theme.Light
     }
 
 
@@ -43,10 +39,10 @@ decodeFlags jsonValue =
                     (\theme ->
                         case theme of
                             "dark" ->
-                                Dark
+                                Theme.Dark
 
                             _ ->
-                                Light
+                                Theme.Light
                     )
     in
     jsonValue
@@ -124,62 +120,11 @@ subscriptions _ =
         ]
 
 
-type alias ThemeColors =
-    { background : Css.Color
-    , foreground : Css.Color
-    , buttonBackground : Css.Color
-    , buttonForeground : Css.Color
-    , primary : Css.Color
-    , panelBackground : Css.Color
-    , stringColor : Css.Color
-    , internalsColor : Css.Color
-    , keysColor : Css.Color
-    , guidelinesColor : Css.Color
-    , expandTriangleColor : Css.Color
-    }
-
-
-lightTheme : ThemeColors
-lightTheme =
-    { background = Css.hex "ffffff"
-    , foreground = Css.hex "000000"
-    , buttonBackground = Css.hex "f0f0f0"
-    , buttonForeground = Css.hex "000000"
-    , primary = Css.hex "ff00ff"
-    , panelBackground = Css.rgba 0 0 0 0.03
-    , stringColor = Css.hex "0000ff"
-    , internalsColor = Css.hex "808080"
-    , keysColor = Css.hex "ff00ff"
-    , guidelinesColor = Css.hex "a0a0a0"
-    , expandTriangleColor = Css.hex "808080"
-    }
-
-
-themeColors : Theme -> ThemeColors
-themeColors theme =
-    if theme == Dark then
-        { lightTheme
-            | background = Css.hex "0f0f0f"
-            , foreground = Css.hex "F8F8F2"
-            , buttonBackground = Css.hex "303030"
-            , buttonForeground = Css.hex "F8F8F2"
-            , panelBackground = Css.rgba 255 255 255 0.1
-            , stringColor = Css.hex "E6DB74"
-            , internalsColor = Css.hex "808080"
-            , keysColor = Css.hex "F92672"
-            , guidelinesColor = Css.hex "AE81FF"
-            , expandTriangleColor = Css.hex "F8F8F0"
-        }
-
-    else
-        lightTheme
-
-
 view : Model -> Html Msg
 view model =
     let
         colors =
-            themeColors model.flags.theme
+            Theme.themeColors model.flags.theme
 
         messages =
             DebugMessages.messages model.messages
