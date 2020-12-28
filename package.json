@@ -21,7 +21,7 @@
     "build:chrome": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=chrome webpack",
     "build:firefox": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=firefox webpack",
     "build:opera": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=opera webpack",
-    "build:site": "cp -r source/devtools/Page/* docs && elm make --optimize source/devtools/Main.elm --output docs/index.js",
+    "build:site": "rm -rf docs && mkdir docs && mkdir docs/assets && cp -r source/devtools/Page/* docs && cp -r source/assets/* docs/assets && elm make --optimize source/devtools/Main.elm --output docs/index.js",
     "build": "yarn run build:chrome && yarn run build:firefox && yarn run build:opera",
     "test": "elm-test",
     "review": "elm-review",

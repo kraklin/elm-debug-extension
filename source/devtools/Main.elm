@@ -30,6 +30,11 @@ smallGap =
     Css.px 8
 
 
+bigGap : Css.Px
+bigGap =
+    Css.px 12
+
+
 type alias Model =
     { input : String
     , panelModel : Panel.Model
@@ -93,10 +98,23 @@ viewError lastError =
     case lastError of
         Just err ->
             Html.styled Html.div
-                [ Css.color <| Css.hex "FF0000" ]
+                [ Css.color <| Css.hex "AB091E"
+                , Css.fontSize <| Css.px 12
+                , Css.maxWidth <| Css.px 300
+                , Css.marginTop bigGap
+                ]
                 []
-                [ Html.styled Html.div [ Css.fontWeight Css.bolder ] [] [ Html.text "There was a problem while trying to parse the above debug.log: " ]
-                , Html.text err
+                [ Html.styled Html.div
+                    [ Css.fontWeight Css.bolder
+                    , Css.fontSize <| Css.px 14
+                    ]
+                    []
+                    [ Html.text "There was a problem while trying to parse the above debug.log: " ]
+                , Html.styled Html.span
+                    [ Css.color <| Css.hex "CF1124"
+                    ]
+                    []
+                    [ Html.text err ]
                 ]
 
         Nothing ->
@@ -119,7 +137,27 @@ view model =
                 , Css.right <| Css.px 0
                 ]
                 []
-                [ Html.styled Html.div [ Css.padding smallGap ] [] [ Html.styled Html.h1 [ Css.margin <| Css.px 0 ] [] [ Html.text "Debug.log parser" ] ]
+                [ Html.styled Html.header
+                    [ Css.padding bigGap
+                    , Css.backgroundColor <| Css.hex "616e7c"
+                    , Css.color <| Css.hex "F5F7FA"
+                    , Css.displayFlex
+                    , Css.justifyContent Css.spaceBetween
+                    ]
+                    []
+                    [ Html.styled Html.h1
+                        [ Css.margin <| Css.px 0
+                        , Css.fontSize <| Css.px 20
+                        , Css.textTransform Css.uppercase
+                        ]
+                        []
+                        [ Html.text "Debug.log parser" ]
+                    , Html.styled Html.a
+                        [ Css.color <| Css.hex "f5f7fa"
+                        ]
+                        [ Attrs.href "https://github.com/kraklin/elm-debug-extension" ]
+                        [ Html.text "Source" ]
+                    ]
                 , Html.styled Html.div
                     [ Css.displayFlex
                     , Css.flexWrap Css.wrap
@@ -132,6 +170,7 @@ view model =
                         , Css.flexDirection Css.column
                         , Css.minWidth <| Css.px 300
                         , Css.padding smallGap
+                        , Css.backgroundColor <| Css.hex "F5F7FA"
                         ]
                         []
                         [ Html.styled Html.textarea
@@ -151,6 +190,13 @@ view model =
                             , Css.cursor Css.pointer
                             , Css.width <| Css.px 200
                             , Css.alignSelf Css.flexEnd
+                            , Css.backgroundColor <| Css.hex "81DEFD"
+                            , Css.color <| Css.hex "035388"
+                            , Css.borderRadius <| Css.px 4
+                            , Css.border3 (Css.px 1) Css.solid (Css.hex "035388")
+                            , Css.hover
+                                [ Css.backgroundColor <| Css.hex "40C3F7"
+                                ]
                             ]
                             [ Events.onClick ParseButtonClicked ]
                             [ Html.text "Parse debug.log" ]

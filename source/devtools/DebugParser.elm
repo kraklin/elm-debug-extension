@@ -65,7 +65,7 @@ deadEndsToString deadEnds =
                 P.BadRepeat ->
                     "BadRepeat at " ++ position
     in
-    List.foldl (++) "" (List.map deadEndToString deadEnds)
+    List.foldl (\str acc -> acc ++ "\n" ++ str) "" (List.map deadEndToString deadEnds)
 
 
 parseVariableName : Parser String
