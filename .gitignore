@@ -1,3 +1,6 @@
+# dev artefacts
+source/devtools/Page/index.js
+
 # ignore haters
 haters/
 
@@ -80,7 +83,7 @@ typings/
 # nuxt.js build output
 .nuxt
 
-# react / gatsby 
+# react / gatsby
 public/
 
 # vuepress build output
@@ -111,4 +114,4 @@ dist/
 .yarn/*
 !.yarn/releases
 !.yarn/plugins
-.pnp.* 
+.pnp.*
