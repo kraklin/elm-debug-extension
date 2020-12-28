@@ -51,7 +51,7 @@ messageHash input =
     Murmur3.hashString 8532 input
 
 
-add : AddMessageData -> DebugMessages -> DebugMessages
+add : AddMessageData -> DebugMessages -> Result String DebugMessages
 add { timestamp, log } (DebugMessages data) =
     let
         hash =
@@ -69,23 +69,22 @@ add { timestamp, log } (DebugMessages data) =
             List.updateAt 0 (Tuple.mapSecond (\s -> s + 1)) queue
     in
     if lastHash == Just hash then
-        DebugMessages { data | queue = increaseLastCount data.queue }
+        Ok <| DebugMessages { data | queue = increaseLastCount data.queue }
 
     else
-        case DebugParser.parse log of
-            Ok { tag, value } ->
-                DebugMessages
-                    { store =
-                        Dict.insert dictKey
-                            { tag = tag
-                            , value = value
-                            }
-                            data.store
-                    , queue = ( dictKey, 1 ) :: data.queue
-                    }
-
-            Err _ ->
-                DebugMessages data
+        DebugParser.parse log
+            |> Result.map
+                (\{ tag, value } ->
+                    DebugMessages
+                        { store =
+                            Dict.insert dictKey
+                                { tag = tag
+                                , value = value
+                                }
+                                data.store
+                        , queue = ( dictKey, 1 ) :: data.queue
+                        }
+                )
 
 
 bulkAdd : List AddMessageData -> DebugMessages -> DebugMessages

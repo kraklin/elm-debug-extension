@@ -10,6 +10,64 @@ type alias ParsedLog =
     }
 
 
+{-| dead ends to string function is still not implemented in Parser library, so I had to copy paste this from another PR. :(
+-}
+deadEndsToString : List P.DeadEnd -> String
+deadEndsToString deadEnds =
+    let
+        deadEndToString : DeadEnd -> String
+        deadEndToString deadEnd =
+            let
+                position : String
+                position =
+                    "row:" ++ String.fromInt deadEnd.row ++ " col:" ++ String.fromInt deadEnd.col ++ "\n"
+            in
+            case deadEnd.problem of
+                P.Expecting str ->
+                    "Expecting '" ++ str ++ "' at " ++ position
+
+                P.ExpectingInt ->
+                    "ExpectingInt at " ++ position
+
+                P.ExpectingHex ->
+                    "ExpectingHex at " ++ position
+
+                P.ExpectingOctal ->
+                    "ExpectingOctal at " ++ position
+
+                P.ExpectingBinary ->
+                    "ExpectingBinary at " ++ position
+
+                P.ExpectingFloat ->
+                    "ExpectingFloat at " ++ position
+
+                P.ExpectingNumber ->
+                    "ExpectingNumber at " ++ position
+
+                P.ExpectingVariable ->
+                    "ExpectingVariable at " ++ position
+
+                P.ExpectingSymbol str ->
+                    "ExpectingSymbol '" ++ str ++ "' at " ++ position
+
+                P.ExpectingKeyword str ->
+                    "ExpectingKeyword '" ++ str ++ "' at " ++ position
+
+                P.ExpectingEnd ->
+                    "ExpectingEnd at " ++ position
+
+                P.UnexpectedChar ->
+                    "UnexpectedChar at " ++ position
+
+                P.Problem str ->
+                    "ProblemString '" ++ str ++ "' at " ++ position
+
+                P.BadRepeat ->
+                    "BadRepeat at " ++ position
+    in
+    List.foldl (++) "" (List.map deadEndToString deadEnds)
+
+
 parseVariableName : Parser String
 parseVariableName =
     P.getChompedString <|
@@ -484,7 +542,7 @@ parseValue =
         ]
 
 
-parse : String -> Result (List DeadEnd) ParsedLog
+parse : String -> Result String ParsedLog
 parse stringToParse =
     stringToParse
         |> String.trim
@@ -495,9 +553,10 @@ parse stringToParse =
                 |= parseValue
                 |. P.end
             )
+        |> Result.mapError deadEndsToString
 
 
-parseWithOptionalTag : String -> Result (List DeadEnd) ParsedLog
+parseWithOptionalTag : String -> Result String ParsedLog
 parseWithOptionalTag stringToParse =
     stringToParse
         |> String.trim
@@ -508,3 +567,4 @@ parseWithOptionalTag stringToParse =
                 |= parseValue
                 |. P.end
             )
+        |> Result.mapError deadEndsToString

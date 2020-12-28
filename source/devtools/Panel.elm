@@ -1,4 +1,4 @@
-port module Panel exposing (main)
+port module Panel exposing (Flags, Model, Msg(..), defaultFlags, init, main, update, view)
 
 import Browser
 import Css
@@ -11,6 +11,7 @@ import Html.Styled.Events as Events
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
+import Task
 import Theme exposing (Theme)
 
 
@@ -64,6 +65,7 @@ type Msg
     | BulkLogReceived Value
     | Clear
     | Toggle DebugMessages.Key Expandable.Key
+    | ParsingError String
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -75,7 +77,15 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LogReceived ( isoTime, log ) ->
-            ( { model | messages = DebugMessages.add (AddMessageData isoTime log) model.messages }, Cmd.none )
+            case DebugMessages.add (AddMessageData isoTime log) model.messages of
+                Ok msgs ->
+                    ( { model | messages = msgs }, Cmd.none )
+
+                Err err ->
+                    ( model, Task.perform identity <| Task.succeed <| ParsingError err )
+
+        ParsingError _ ->
+            ( model, Cmd.none )
 
         BulkLogReceived bulkMessages ->
             let
@@ -149,7 +159,11 @@ view model =
         , Css.flexGrow <| Css.int 1
         , Css.displayFlex
         , Css.flexDirection Css.column
-        , Css.maxHeight <| Css.vh 100
+        , Css.position Css.absolute
+        , Css.top <| Css.px 0
+        , Css.bottom <| Css.px 0
+        , Css.left <| Css.px 0
+        , Css.right <| Css.px 0
         ]
         []
         [ Html.div
