@@ -139,7 +139,7 @@ view model =
         messages =
             DebugMessages.messages model.messages
                 |> List.map
-                    (\{ tag, value, count, key } ->
+                    (\{ tag, value, count, key, isoTime } ->
                         Html.div
                             [ Attrs.css
                                 [ Css.marginBottom (Css.px 12)
@@ -148,7 +148,7 @@ view model =
                                 , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
-                            [ Expandable.viewMessageHeader colors (Toggle key) count tag value ]
+                            [ Expandable.viewMessageHeader colors (Toggle key) count tag isoTime value ]
                     )
     in
     Html.styled Html.div

@@ -325,20 +325,32 @@ viewValueHeader colorTheme value =
 
                     [ ( name, singleValue ) ] ->
                         Html.span []
-                            [ Html.text "{"
-                            , Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ] [ Html.text name ]
+                            [ Html.text "{ "
+                            , Html.span
+                                [ Attrs.css
+                                    [ Css.color colorTheme.keysColor
+                                    , Css.fontStyle Css.italic
+                                    ]
+                                ]
+                                [ Html.text name ]
                             , Html.text ": "
                             , viewValueHeader colorTheme singleValue
-                            , Html.text "}"
+                            , Html.text " }"
                             ]
 
                     ( name, firstItem ) :: _ ->
                         Html.span []
-                            [ Html.text "{"
-                            , Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ] [ Html.text name ]
+                            [ Html.text "{ "
+                            , Html.span
+                                [ Attrs.css
+                                    [ Css.color colorTheme.keysColor
+                                    , Css.fontStyle Css.italic
+                                    ]
+                                ]
+                                [ Html.text name ]
                             , Html.text ": "
                             , viewValueHeader colorTheme firstItem
-                            , Html.text ", ...}"
+                            , Html.text ", ... }"
                             ]
                 ]
 
@@ -446,8 +458,8 @@ toggableDiv colorTheme child toggleAttribute content =
         Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] content
 
 
-viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> ElmValue -> Html msg
-viewMessageHeader colorTheme toggleMsg count tag value =
+viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> String -> ElmValue -> Html msg
+viewMessageHeader colorTheme toggleMsg count tag time value =
     let
         viewCount =
             if count > 1 then
@@ -468,9 +480,16 @@ viewMessageHeader colorTheme toggleMsg count tag value =
             else
                 Html.text ""
     in
-    Html.div []
+    Html.div
+        [ Attrs.css
+            [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
+            ]
+        ]
         [ viewCount
-        , Html.text tag
+        , Html.div []
+            [ Html.text tag
+            , Html.span [ Attrs.css [ Css.float Css.left ] ] [ Html.text time ]
+            ]
         , toggableDiv colorTheme
             value
             (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
@@ -543,7 +562,12 @@ viewValue colorTheme toggleMsg parentKey value =
                                 toggableDiv colorTheme
                                     child
                                     (toggleCurrent idx)
-                                    [ Html.span [ Attrs.css [ Css.color colorTheme.keysColor ] ]
+                                    [ Html.span
+                                        [ Attrs.css
+                                            [ Css.color colorTheme.keysColor
+                                            , Css.fontStyle Css.italic
+                                            ]
+                                        ]
                                         [ Html.text key ]
                                     , Html.text ": "
                                     , viewChildFn idx child

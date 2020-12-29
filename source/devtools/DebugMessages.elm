@@ -18,6 +18,7 @@ type alias DebugMessage =
     , value : ElmValue
     , key : Key
     , count : Int
+    , isoTime : String
     }
 
 
@@ -158,6 +159,7 @@ messages (DebugMessages data) =
                             , value = m.value
                             , count = count
                             , key = key
+                            , isoTime = Tuple.second key
                             }
                         )
             )
