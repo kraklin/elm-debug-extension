@@ -1,6 +1,6 @@
 module DebugMessages exposing (..)
 
-import DebugParser
+import DebugParser exposing (ParsedLog)
 import Dict exposing (Dict)
 import Expandable exposing (ElmValue)
 import List.Extra as List
@@ -35,14 +35,34 @@ type DebugMessages
     = DebugMessages
         { store : Dict Key StoreMessage
         , queue : List ( Key, Int )
+        , parseFn : String -> Result String ParsedLog
         }
 
 
-empty : DebugMessages
-empty =
+initWithCustomParser : (String -> Result String ParsedLog) -> DebugMessages
+initWithCustomParser parseFn =
     DebugMessages
         { store = Dict.empty
         , queue = []
+        , parseFn = parseFn
+        }
+
+
+init : DebugMessages
+init =
+    DebugMessages
+        { store = Dict.empty
+        , queue = []
+        , parseFn = DebugParser.parse
+        }
+
+
+clear : DebugMessages -> DebugMessages
+clear (DebugMessages { parseFn }) =
+    DebugMessages
+        { store = Dict.empty
+        , queue = []
+        , parseFn = parseFn
         }
 
 
@@ -72,7 +92,7 @@ add { timestamp, log } (DebugMessages data) =
         Ok <| DebugMessages { data | queue = increaseLastCount data.queue }
 
     else
-        DebugParser.parse log
+        data.parseFn log
             |> Result.map
                 (\{ tag, value } ->
                     DebugMessages
@@ -83,6 +103,7 @@ add { timestamp, log } (DebugMessages data) =
                                 }
                                 data.store
                         , queue = ( dictKey, 1 ) :: data.queue
+                        , parseFn = data.parseFn
                         }
                 )
 
@@ -97,7 +118,7 @@ bulkAdd bulkList (DebugMessages data) =
                 |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
                 |> List.map
                     (\( ( hash, { log, timestamp } ), count ) ->
-                        case DebugParser.parse log of
+                        case data.parseFn log of
                             Ok { tag, value } ->
                                 Just
                                     { count = count

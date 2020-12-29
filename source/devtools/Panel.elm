@@ -70,7 +70,7 @@ type Msg
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( { messages = DebugMessages.empty, flags = flags }, Cmd.none )
+    ( { messages = DebugMessages.init, flags = flags }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -113,7 +113,7 @@ update msg model =
 
         Clear ->
             ( { model
-                | messages = DebugMessages.empty
+                | messages = DebugMessages.clear model.messages
               }
             , Cmd.none
             )

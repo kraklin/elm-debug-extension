@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Css
+import DebugMessages
 import DebugParser
 import Expandable
 import Html.Events.Extra as Events
@@ -52,14 +53,17 @@ type Msg
 init : Value -> ( Model, Cmd Msg )
 init flags =
     let
-        ( panelModel, panelCmd ) =
-            Panel.init Panel.defaultFlags
+        panelModel : Panel.Model
+        panelModel =
+            { messages = DebugMessages.initWithCustomParser DebugParser.parseWithOptionalTag
+            , flags = Panel.defaultFlags
+            }
     in
     ( { input = ""
       , panelModel = panelModel
       , lastError = Nothing
       }
-    , Cmd.map PanelMsg panelCmd
+    , Cmd.none
     )
 
 

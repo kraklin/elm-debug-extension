@@ -561,10 +561,17 @@ parseWithOptionalTag stringToParse =
     stringToParse
         |> String.trim
         |> P.run
-            (P.succeed (ParsedLog "Debug message")
-                |. (P.getChompedString <| P.chompUntil ": ")
-                |. P.token ": "
-                |= parseValue
-                |. P.end
+            (P.oneOf
+                [ P.backtrackable
+                    (P.succeed ParsedLog
+                        |= (P.getChompedString <| P.chompUntil ": ")
+                        |. P.token ": "
+                        |= parseValue
+                        |. P.end
+                    )
+                , P.succeed (ParsedLog "Debug message")
+                    |= parseValue
+                    |. P.end
+                ]
             )
         |> Result.mapError deadEndsToString
