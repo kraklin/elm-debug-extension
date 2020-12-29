@@ -159,7 +159,7 @@ messages (DebugMessages data) =
                             , value = m.value
                             , count = count
                             , key = key
-                            , isoTime = Tuple.second key
+                            , isoTime = String.replace "T" " " <| Tuple.second key
                             }
                         )
             )

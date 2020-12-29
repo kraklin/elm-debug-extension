@@ -265,6 +265,7 @@ type alias ColorTheme a =
         , keysColor : Css.Color
         , guidelinesColor : Css.Color
         , expandTriangleColor : Css.Color
+        , valueBackgroundColor : Css.Color
     }
 
 
@@ -472,7 +473,7 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                         , Css.borderRadius <| Css.px 14
                         , Css.padding2 (Css.px 0) (Css.px 8)
                         , Css.fontSize <| Css.px 10
-                        , Css.marginRight (Css.px 4)
+                        , Css.marginRight <| Css.px 4
                         ]
                     ]
                     [ Html.text <| String.fromInt count ]
@@ -485,15 +486,36 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
             [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
             ]
         ]
-        [ viewCount
-        , Html.div []
-            [ Html.text tag
-            , Html.span [ Attrs.css [ Css.float Css.left ] ] [ Html.text time ]
+        [ Html.div
+            [ Attrs.css
+                [ Css.displayFlex
+                , Css.alignItems Css.baseline
+                , Css.marginBottom <| Css.px 8
+                ]
             ]
-        , toggableDiv colorTheme
-            value
-            (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
-            [ viewValue colorTheme toggleMsg [] value ]
+            [ viewCount
+            , Html.span [ Attrs.css [ Css.flexGrow <| Css.int 1 ] ] [ Html.text tag ]
+            , Html.span
+                [ Attrs.css
+                    [ Css.fontSize <| Css.px 10
+                    , Css.color colorTheme.guidelinesColor
+                    , Css.textAlign Css.right
+                    ]
+                ]
+                [ Html.text time ]
+            ]
+        , Html.div
+            [ Attrs.css
+                [ Css.borderRadius <| Css.px 4
+                , Css.padding2 (Css.px 8) (Css.px 12)
+                , Css.backgroundColor colorTheme.valueBackgroundColor
+                ]
+            ]
+            [ toggableDiv colorTheme
+                value
+                (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
+                [ viewValue colorTheme toggleMsg [] value ]
+            ]
         ]
 
 

@@ -168,50 +168,56 @@ view model =
                     , Css.height <| Css.pct 100
                     ]
                     []
-                    [ Html.styled Html.div
-                        [ Css.displayFlex
-                        , Css.flexGrow <| Css.int 1
-                        , Css.flexDirection Css.column
-                        , Css.minWidth <| Css.px 300
-                        , Css.padding smallGap
-                        , Css.backgroundColor <| Css.hex "F5F7FA"
-                        ]
-                        []
-                        [ Html.styled Html.textarea
-                            [ Css.width <| Css.pct 100
-                            , Css.height <| Css.pct 75
-                            , Css.boxSizing Css.borderBox
-                            , Css.resize Css.none
-                            , Css.marginBottom smallGap
+                    [ Html.div
+                        [ Attrs.css
+                            [ Css.displayFlex
+                            , Css.flexGrow <| Css.int 1
+                            , Css.flexDirection Css.column
+                            , Css.minWidth <| Css.px 300
                             , Css.padding smallGap
+                            , Css.backgroundColor <| Css.hex "F5F7FA"
                             ]
-                            [ Events.onInput InputChanged
+                        ]
+                        [ Html.textarea
+                            [ Attrs.css
+                                [ Css.width <| Css.pct 100
+                                , Css.height <| Css.pct 75
+                                , Css.boxSizing Css.borderBox
+                                , Css.resize Css.none
+                                , Css.marginBottom smallGap
+                                , Css.padding smallGap
+                                ]
+                            , Events.onInput InputChanged
                             , Attrs.placeholder "Paste debug.log message here..."
                             ]
                             []
-                        , Html.styled Html.button
-                            [ Css.padding2 tinyGap smallGap
-                            , Css.cursor Css.pointer
-                            , Css.width <| Css.px 200
-                            , Css.alignSelf Css.flexEnd
-                            , Css.backgroundColor <| Css.hex "81DEFD"
-                            , Css.color <| Css.hex "035388"
-                            , Css.borderRadius <| Css.px 4
-                            , Css.border3 (Css.px 1) Css.solid (Css.hex "035388")
-                            , Css.hover
-                                [ Css.backgroundColor <| Css.hex "40C3F7"
+                        , Html.button
+                            [ Attrs.css
+                                [ Css.padding2 tinyGap smallGap
+                                , Css.cursor Css.pointer
+                                , Css.width <| Css.px 200
+                                , Css.alignSelf Css.flexEnd
+                                , Css.backgroundColor <| Css.hex "81DEFD"
+                                , Css.color <| Css.hex "035388"
+                                , Css.borderRadius <| Css.px 4
+                                , Css.border3 (Css.px 1) Css.solid (Css.hex "035388")
+                                , Css.hover
+                                    [ Css.backgroundColor <| Css.hex "40C3F7"
+                                    ]
                                 ]
+                            , Events.onClick ParseButtonClicked
+                            , Attrs.disabled <| String.isEmpty model.input
                             ]
-                            [ Events.onClick ParseButtonClicked ]
                             [ Html.text "Parse debug.log" ]
                         , viewError model.lastError
                         ]
-                    , Html.styled Html.div
-                        [ Css.flexGrow <| Css.int 2
-                        , Css.minWidth <| Css.px 400
-                        , Css.position Css.relative
+                    , Html.div
+                        [ Attrs.css
+                            [ Css.flexGrow <| Css.int 2
+                            , Css.minWidth <| Css.px 400
+                            , Css.position Css.relative
+                            ]
                         ]
-                        []
                         [ Html.map PanelMsg <| Panel.view model.panelModel
                         ]
                     ]

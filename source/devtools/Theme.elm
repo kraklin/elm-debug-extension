@@ -20,6 +20,7 @@ type alias ThemeColors =
     , keysColor : Css.Color
     , guidelinesColor : Css.Color
     , expandTriangleColor : Css.Color
+    , valueBackgroundColor : Css.Color
     }
 
 
@@ -36,6 +37,7 @@ lightTheme =
     , keysColor = Css.hex "ff00ff"
     , guidelinesColor = Css.hex "a0a0a0"
     , expandTriangleColor = Css.hex "808080"
+    , valueBackgroundColor = Css.hex "ffffff"
     }
 
 
@@ -53,6 +55,7 @@ themeColors theme =
             , keysColor = Css.hex "F92672"
             , guidelinesColor = Css.hex "AE81FF"
             , expandTriangleColor = Css.hex "F8F8F0"
+            , valueBackgroundColor = Css.hex "0f0f0f"
         }
 
     else
