@@ -14,7 +14,7 @@ import Iso8601
 import Json.Decode exposing (Value)
 import Panel exposing (Msg(..))
 import Task
-import Time exposing (Posix)
+import Time exposing (Posix, Zone)
 
 
 
@@ -36,10 +36,16 @@ bigGap =
     Css.px 12
 
 
+sampleData : String
+sampleData =
+    "Debug model: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], binaryTree = Node (Node (Leaf None) (Leaf None)) (Node (Leaf None) (Leaf None)), bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), custom = Complex [(1,Some \"text\" 1),(2,Recursive (Complex [])),(3,None),(4,With_Underscore1)], customRecord = WithRecord [{ age = 21, name = \"Joe\" }], dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, list = [Nothing,Just [\"String\"],Nothing,Nothing], listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }"
+
+
 type alias Model =
     { input : String
     , panelModel : Panel.Model
     , lastError : Maybe String
+    , zone : Zone
     }
 
 
@@ -48,6 +54,8 @@ type Msg
     | ParseButtonClicked
     | PanelMsg Panel.Msg
     | ParseInput Posix
+    | UseSampleData
+    | GetZone Zone
 
 
 init : Value -> ( Model, Cmd Msg )
@@ -57,19 +65,28 @@ init flags =
         panelModel =
             { messages = DebugMessages.initWithCustomParser DebugParser.parseWithOptionalTag
             , flags = Panel.defaultFlags
+            , zone = Time.utc
             }
     in
     ( { input = ""
       , panelModel = panelModel
       , lastError = Nothing
+      , zone = Time.utc
       }
-    , Cmd.none
+    , Task.perform GetZone Time.here
     )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GetZone zone ->
+            let
+                updatedPanelModel pModel =
+                    { pModel | zone = zone }
+            in
+            ( { model | zone = zone, panelModel = updatedPanelModel model.panelModel }, Cmd.none )
+
         InputChanged str ->
             ( { model | input = str }, Cmd.none )
 
@@ -77,7 +94,11 @@ update msg model =
             ( model, Task.perform ParseInput Time.now )
 
         ParseInput posixTime ->
-            ( model, Task.perform identity <| Task.succeed <| PanelMsg <| Panel.LogReceived ( Iso8601.fromTime posixTime, model.input ) )
+            ( model
+            , ( Iso8601.fromTime posixTime, model.input )
+                |> (Task.succeed << PanelMsg << Panel.LogReceived)
+                |> Task.perform identity
+            )
 
         PanelMsg (ParsingError str) ->
             ( { model | lastError = Just str }, Cmd.none )
@@ -90,6 +111,9 @@ update msg model =
             ( { model | panelModel = pModel, lastError = Nothing }
             , Cmd.map PanelMsg pCmd
             )
+
+        UseSampleData ->
+            ( { model | input = sampleData }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -127,7 +151,7 @@ viewError lastError =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = ""
+    { title = "Elm Debug.log parser"
     , body =
         [ Html.toUnstyled <|
             Html.styled Html.div
@@ -189,26 +213,55 @@ view model =
                                 ]
                             , Events.onInput InputChanged
                             , Attrs.placeholder "Paste debug.log message here..."
+                            , Attrs.value model.input
                             ]
                             []
-                        , Html.button
+                        , Html.div
                             [ Attrs.css
-                                [ Css.padding2 tinyGap smallGap
-                                , Css.cursor Css.pointer
-                                , Css.width <| Css.px 200
-                                , Css.alignSelf Css.flexEnd
-                                , Css.backgroundColor <| Css.hex "81DEFD"
-                                , Css.color <| Css.hex "035388"
-                                , Css.borderRadius <| Css.px 4
-                                , Css.border3 (Css.px 1) Css.solid (Css.hex "035388")
-                                , Css.hover
-                                    [ Css.backgroundColor <| Css.hex "40C3F7"
-                                    ]
+                                [ Css.displayFlex
+                                , Css.justifyContent Css.spaceBetween
                                 ]
-                            , Events.onClick ParseButtonClicked
-                            , Attrs.disabled <| String.isEmpty model.input
                             ]
-                            [ Html.text "Parse debug.log" ]
+                            [ Html.button
+                                [ Attrs.css
+                                    [ Css.padding2 tinyGap smallGap
+                                    , Css.cursor Css.pointer
+                                    , Css.color <| Css.hex "035388"
+                                    , Css.backgroundColor <| Css.inherit
+                                    , Css.fontWeight Css.bold
+                                    , Css.borderWidth <| Css.px 0
+                                    , Css.hover
+                                        [ Css.color <| Css.hex "1992D4"
+                                        ]
+                                    ]
+                                , Events.onClick UseSampleData
+                                ]
+                                [ Html.text "Sample Data" ]
+                            , Html.button
+                                [ Attrs.css
+                                    [ Css.padding2 tinyGap smallGap
+                                    , Css.cursor Css.pointer
+                                    , Css.width <| Css.px 200
+                                    , Css.alignSelf Css.flexEnd
+                                    , Css.backgroundColor <| Css.hex "81DEFD"
+                                    , Css.color <| Css.hex "035388"
+                                    , Css.borderRadius <| Css.px 4
+                                    , Css.border3 (Css.px 1) Css.solid (Css.hex "035388")
+                                    , Css.hover
+                                        [ Css.backgroundColor <| Css.hex "40C3F7"
+                                        ]
+                                    , Css.disabled
+                                        [ Css.cursor Css.notAllowed
+                                        , Css.hover
+                                            [ Css.backgroundColor <| Css.hex "81DEFD"
+                                            ]
+                                        ]
+                                    ]
+                                , Events.onClick ParseButtonClicked
+                                , Attrs.disabled <| String.isEmpty model.input
+                                ]
+                                [ Html.text "Parse debug.log" ]
+                            ]
                         , viewError model.lastError
                         ]
                     , Html.div

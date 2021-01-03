@@ -8,11 +8,13 @@ import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events
+import Iso8601
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
 import Task
 import Theme exposing (Theme)
+import Time exposing (Month(..), Posix, Zone)
 
 
 port logReceived : (( String, String ) -> msg) -> Sub msg
@@ -57,6 +59,7 @@ decodeFlags jsonValue =
 type alias Model =
     { messages : DebugMessages
     , flags : Flags
+    , zone : Zone
     }
 
 
@@ -66,16 +69,25 @@ type Msg
     | Clear
     | Toggle DebugMessages.Key Expandable.Key
     | ParsingError String
+    | GetZone Zone
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( { messages = DebugMessages.init, flags = flags }, Cmd.none )
+    ( { messages = DebugMessages.init
+      , flags = flags
+      , zone = Time.utc
+      }
+    , Task.perform GetZone Time.here
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GetZone zone ->
+            ( { model | zone = zone }, Cmd.none )
+
         LogReceived ( isoTime, log ) ->
             case DebugMessages.add (AddMessageData isoTime log) model.messages of
                 Ok msgs ->
@@ -130,11 +142,77 @@ subscriptions _ =
         ]
 
 
+formattedTime : Zone -> Posix -> String
+formattedTime zone posix =
+    let
+        monthToStr =
+            case Time.toMonth zone posix of
+                Jan ->
+                    "01"
+
+                Feb ->
+                    "02"
+
+                Mar ->
+                    "03"
+
+                Apr ->
+                    "04"
+
+                May ->
+                    "05"
+
+                Jun ->
+                    "06"
+
+                Jul ->
+                    "07"
+
+                Aug ->
+                    "08"
+
+                Sep ->
+                    "09"
+
+                Oct ->
+                    "10"
+
+                Nov ->
+                    "11"
+
+                Dec ->
+                    "12"
+
+        toTwoDigits num =
+            num
+                |> String.fromInt
+                |> String.padLeft 2 '0'
+    in
+    --format time YYYY-MM-DD HH:MM:SS
+    String.fromInt (Time.toYear zone posix)
+        ++ "-"
+        ++ monthToStr
+        ++ "-"
+        ++ toTwoDigits (Time.toDay zone posix)
+        ++ " "
+        ++ toTwoDigits (Time.toHour zone posix)
+        ++ ":"
+        ++ toTwoDigits (Time.toMinute zone posix)
+        ++ ":"
+        ++ toTwoDigits (Time.toSecond zone posix)
+
+
 view : Model -> Html Msg
 view model =
     let
         colors =
             Theme.themeColors model.flags.theme
+
+        localTime isoTime =
+            isoTime
+                |> Iso8601.toTime
+                |> Result.map (\posixTime -> formattedTime model.zone posixTime)
+                |> Result.withDefault isoTime
 
         messages =
             DebugMessages.messages model.messages
@@ -148,7 +226,7 @@ view model =
                                 , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
-                            [ Expandable.viewMessageHeader colors (Toggle key) count tag isoTime value ]
+                            [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime isoTime) value ]
                     )
     in
     Html.styled Html.div
