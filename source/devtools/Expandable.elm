@@ -266,6 +266,10 @@ type alias ColorTheme a =
         , guidelinesColor : Css.Color
         , expandTriangleColor : Css.Color
         , valueBackgroundColor : Css.Color
+        , numbersColor : Css.Color
+        , customTypesColor : Css.Color
+        , booleanColor : Css.Color
+        , sequenceNameColor : Css.Color
     }
 
 
@@ -274,14 +278,12 @@ viewValueHeader colorTheme value =
     case value of
         ElmTuple _ children ->
             Html.span []
-                [ Html.span []
-                    [ Html.text "("
-                    , Html.span []
-                        (List.map (viewValueHeader colorTheme) children
-                            |> List.intersperse (Html.text ", ")
-                        )
-                    , Html.text ")"
-                    ]
+                [ Html.text "("
+                , Html.span []
+                    (List.map (viewValueHeader colorTheme) children
+                        |> List.intersperse (Html.text ", ")
+                    )
+                , Html.text ")"
                 ]
 
         ElmSequence seqType _ children ->
@@ -304,8 +306,7 @@ viewValueHeader colorTheme value =
                 [ singleton ] ->
                     Html.span [] <|
                         if hasNestedValues singleton then
-                            [ Html.span []
-                                [ Html.text "[...]" ]
+                            [ Html.text "[…]"
                             ]
 
                         else
@@ -315,63 +316,82 @@ viewValueHeader colorTheme value =
                             ]
 
                 _ ->
-                    Html.text <| typeToString ++ "(" ++ String.fromInt (List.length children) ++ ")"
+                    Html.span []
+                        [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
+                            [ Html.text typeToString
+                            ]
+                        , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
+                        ]
 
         ElmRecord _ recordValues ->
             Html.span
                 []
-                [ case recordValues of
+                (case recordValues of
                     [] ->
-                        Html.text "{}"
+                        [ Html.text "{}" ]
 
                     [ ( name, singleValue ) ] ->
-                        Html.span []
-                            [ Html.text "{ "
-                            , Html.span
-                                [ Attrs.css
-                                    [ Css.color colorTheme.keysColor
-                                    , Css.fontStyle Css.italic
-                                    ]
+                        [ Html.text "{ "
+                        , Html.span
+                            [ Attrs.css
+                                [ Css.color colorTheme.keysColor
+                                , Css.fontStyle Css.italic
                                 ]
-                                [ Html.text name ]
-                            , Html.text ": "
-                            , viewValueHeader colorTheme singleValue
-                            , Html.text " }"
                             ]
+                            [ Html.text name ]
+                        , Html.text ": "
+                        , viewValueHeader colorTheme singleValue
+                        , Html.text " }"
+                        ]
 
                     ( name, firstItem ) :: _ ->
-                        Html.span []
-                            [ Html.text "{ "
-                            , Html.span
-                                [ Attrs.css
-                                    [ Css.color colorTheme.keysColor
-                                    , Css.fontStyle Css.italic
-                                    ]
+                        [ Html.text "{ "
+                        , Html.span
+                            [ Attrs.css
+                                [ Css.color colorTheme.keysColor
+                                , Css.fontStyle Css.italic
                                 ]
-                                [ Html.text name ]
-                            , Html.text ": "
-                            , viewValueHeader colorTheme firstItem
-                            , Html.text ", ... }"
                             ]
-                ]
+                            [ Html.text name ]
+                        , Html.text ": "
+                        , viewValueHeader colorTheme firstItem
+                        , Html.text ", … }"
+                        ]
+                )
 
         ElmDict _ dictValues ->
-            Html.span
-                []
-                [ Html.text <| "Dict (" ++ (String.fromInt <| List.length dictValues) ++ ")" ]
+            Html.span []
+                [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
+                    [ Html.text "Dict"
+                    ]
+                , Html.text <| "(" ++ (String.fromInt <| List.length dictValues) ++ ")"
+                ]
 
         ElmType _ name values ->
             case values of
                 [] ->
-                    Html.text name
+                    Html.span
+                        [ Attrs.css [ Css.color colorTheme.customTypesColor ]
+                        ]
+                        [ Html.text name ]
 
                 [ oneValue ] ->
-                    Html.span [] [ Html.text (name ++ " "), viewValueHeader colorTheme oneValue ]
+                    Html.span []
+                        [ Html.span
+                            [ Attrs.css [ Css.color colorTheme.customTypesColor ]
+                            ]
+                            [ Html.text (name ++ " ") ]
+                        , viewValueHeader colorTheme oneValue
+                        ]
 
                 _ ->
-                    Html.span
-                        []
-                        [ Html.text name, Html.text " ..." ]
+                    Html.span []
+                        [ Html.span
+                            [ Attrs.css [ Css.color colorTheme.customTypesColor ]
+                            ]
+                            [ Html.text name ]
+                        , Html.text " …"
+                        ]
 
         ElmString str ->
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
@@ -380,18 +400,20 @@ viewValueHeader colorTheme value =
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
         ElmFloat float ->
-            Html.text <| String.fromFloat float ++ "f"
+            Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromFloat float ++ "f" ]
 
         ElmInt int ->
-            Html.text <| String.fromInt int
+            Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromInt int ]
 
         ElmBool bool ->
-            Html.text <|
-                if bool then
-                    "True"
+            Html.span [ Attrs.css [ Css.color colorTheme.booleanColor ] ]
+                [ Html.text <|
+                    if bool then
+                        "True"
 
-                else
-                    "False"
+                    else
+                        "False"
+                ]
 
         ElmInternals ->
             Html.span [ Attrs.css [ Css.color colorTheme.internalsColor ] ]
@@ -436,22 +458,20 @@ isValueOpened value =
 toggableDiv colorTheme child toggleAttribute content =
     if hasNestedValues child then
         Html.div [] <|
-            Html.span []
-                [ Html.span
-                    [ Attrs.css
-                        [ Css.display Css.inlineBlock
-                        , Css.cursor Css.pointer
-                        , Css.width (Css.px 12)
-                        , Css.color colorTheme.expandTriangleColor
-                        ]
-                    , toggleAttribute
+            Html.div
+                [ Attrs.css
+                    [ Css.display Css.inlineBlock
+                    , Css.cursor Css.pointer
+                    , Css.width (Css.px 12)
+                    , Css.color colorTheme.expandTriangleColor
                     ]
-                    [ if isValueOpened child then
-                        Html.text "▾"
+                , toggleAttribute
+                ]
+                [ if isValueOpened child then
+                    Html.text "▾"
 
-                      else
-                        Html.text "▸"
-                    ]
+                  else
+                    Html.text "▸"
                 ]
                 :: content
 
@@ -523,7 +543,7 @@ viewValue : ColorTheme a -> (Key -> msg) -> Key -> ElmValue -> Html msg
 viewValue colorTheme toggleMsg parentKey value =
     let
         viewChildFn idx v =
-            Html.span [] [ viewValue colorTheme toggleMsg (parentKey ++ [ idx ]) v ]
+            viewValue colorTheme toggleMsg (parentKey ++ [ idx ]) v
 
         toggleCurrent idx =
             Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ])
@@ -533,13 +553,12 @@ viewValue colorTheme toggleMsg parentKey value =
 
         childrenWrapper attrs children =
             Html.div
-                ([ Attrs.css
+                (Attrs.css
                     [ Css.paddingLeft (Css.em 1)
                     , Css.marginLeft (Css.px 3)
                     , Css.borderLeft3 (Css.px 1) Css.solid colorTheme.guidelinesColor
                     ]
-                 ]
-                    ++ attrs
+                    :: attrs
                 )
                 children
     in
@@ -622,7 +641,7 @@ viewValue colorTheme toggleMsg parentKey value =
         ElmType isOpened name values ->
             case values of
                 [] ->
-                    Html.text name
+                    Html.span [ Attrs.css [ Css.color colorTheme.customTypesColor ] ] [ Html.text name ]
 
                 [ oneValue ] ->
                     Html.span []
@@ -642,7 +661,7 @@ viewValue colorTheme toggleMsg parentKey value =
                 multipleValues ->
                     if isOpened then
                         Html.span
-                            [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
+                            [ Attrs.css [ Css.color colorTheme.customTypesColor ] ]
                             [ Html.text name
                             , childrenWrapper [] <|
                                 List.indexedMap (\idx c -> toggableDiv colorTheme c (toggleCurrent idx) [ viewChildFn idx c ]) multipleValues
@@ -650,8 +669,8 @@ viewValue colorTheme toggleMsg parentKey value =
 
                     else
                         Html.span
-                            [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg <| parentKey ]
-                            [ Html.text name, Html.text " ..." ]
+                            [ Attrs.css [ Css.color colorTheme.customTypesColor ] ]
+                            [ Html.text name, Html.text " …" ]
 
         _ ->
             viewValueHeader colorTheme value
