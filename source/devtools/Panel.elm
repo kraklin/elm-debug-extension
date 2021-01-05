@@ -89,21 +89,46 @@ update msg model =
             ( { model | zone = zone }, Cmd.none )
 
         LogReceived ( isoTime, log ) ->
-            case DebugMessages.add (AddMessageData isoTime log) model.messages of
-                Ok msgs ->
-                    ( { model | messages = msgs }, Cmd.none )
+            let
+                maybePosix =
+                    Iso8601.toTime isoTime
+                        |> Result.toMaybe
 
-                Err err ->
-                    ( model, Task.perform identity <| Task.succeed <| ParsingError err )
+                triggerError =
+                    Task.perform identity << Task.succeed << ParsingError
+            in
+            maybePosix
+                |> Maybe.map
+                    (\posix ->
+                        case DebugMessages.add (AddMessageData posix log) model.messages of
+                            Ok msgs ->
+                                ( { model | messages = msgs }, Cmd.none )
+
+                            Err err ->
+                                ( model, triggerError err )
+                    )
+                |> Maybe.withDefault ( model, triggerError "time is not a valid ISO time format" )
 
         ParsingError _ ->
             ( model, Cmd.none )
 
         BulkLogReceived bulkMessages ->
             let
+                timeDecoder =
+                    Decode.andThen
+                        (\isoTime ->
+                            case Iso8601.toTime isoTime of
+                                Ok posixTime ->
+                                    Decode.succeed posixTime
+
+                                Err _ ->
+                                    Decode.fail <| "'" ++ isoTime ++ "' is invalid ISO Time format"
+                        )
+                        Decode.string
+
                 bulkMessageDecoder =
                     Decode.map2 AddMessageData
-                        (Decode.field "time" Decode.string)
+                        (Decode.field "time" timeDecoder)
                         (Decode.field "log" Decode.string)
 
                 decodedValues : Result Decode.Error (List AddMessageData)
@@ -208,16 +233,13 @@ view model =
         colors =
             Theme.themeColors model.flags.theme
 
-        localTime isoTime =
-            isoTime
-                |> Iso8601.toTime
-                |> Result.map (\posixTime -> formattedTime model.zone posixTime)
-                |> Result.withDefault isoTime
+        localTime time =
+            formattedTime model.zone time
 
         messages =
             DebugMessages.messages model.messages
                 |> List.map
-                    (\{ tag, value, count, key, isoTime } ->
+                    (\{ tag, value, count, key, time } ->
                         Html.div
                             [ Attrs.css
                                 [ Css.marginBottom (Css.px 12)
@@ -226,7 +248,7 @@ view model =
                                 , Css.padding2 (Css.px 8) (Css.px 12)
                                 ]
                             ]
-                            [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime isoTime) value ]
+                            [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime time) value ]
                     )
     in
     Html.styled Html.div

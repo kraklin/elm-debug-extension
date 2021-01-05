@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Expandable exposing (ElmValue)
 import List.Extra as List
 import Murmur3
+import Time exposing (Posix)
 
 
 type alias StoreMessage =
@@ -18,18 +19,44 @@ type alias DebugMessage =
     , value : ElmValue
     , key : Key
     , count : Int
-    , isoTime : String
+    , time : Posix
     }
 
 
 type alias AddMessageData =
-    { timestamp : String
+    { timestamp : Posix
     , log : String
     }
 
 
+type alias Hash =
+    Int
+
+
+{-|
+
+    first: hash
+    second: Posix.fromMilis
+
+-}
 type alias Key =
-    ( Int, String )
+    ( Hash, Int )
+
+
+toKey : Hash -> Posix -> Key
+toKey hash time =
+    ( hash, Time.posixToMillis time )
+
+
+posixFromKey : Key -> Posix
+posixFromKey =
+    Tuple.second
+        >> Time.millisToPosix
+
+
+hashFromKey : Key -> Hash
+hashFromKey =
+    Tuple.first
 
 
 type DebugMessages
@@ -81,10 +108,10 @@ add { timestamp, log } (DebugMessages data) =
         lastHash =
             data.queue
                 |> List.head
-                |> Maybe.map (Tuple.first >> Tuple.first)
+                |> Maybe.map (Tuple.first >> hashFromKey)
 
         dictKey =
-            ( hash, timestamp )
+            toKey hash timestamp
 
         increaseLastCount queue =
             List.updateAt 0 (Tuple.mapSecond (\s -> s + 1)) queue
@@ -136,13 +163,13 @@ bulkAdd bulkList (DebugMessages data) =
 
         newStore =
             parsedMessages
-                |> List.map (\{ tag, value, hash, timestamp } -> ( ( hash, timestamp ), { tag = tag, value = value } ))
+                |> List.map (\{ tag, value, hash, timestamp } -> ( toKey hash timestamp, { tag = tag, value = value } ))
                 |> Dict.fromList
                 |> Dict.union data.store
 
         newQueue =
             parsedMessages
-                |> List.map (\{ hash, timestamp, count } -> ( ( hash, timestamp ), count ))
+                |> List.map (\{ hash, timestamp, count } -> ( toKey hash timestamp, count ))
     in
     DebugMessages { data | store = newStore, queue = newQueue ++ data.queue }
 
@@ -159,7 +186,7 @@ messages (DebugMessages data) =
                             , value = m.value
                             , count = count
                             , key = key
-                            , isoTime = Tuple.second key
+                            , time = posixFromKey key
                             }
                         )
             )
