@@ -60,6 +60,7 @@ type alias Model =
     { messages : DebugMessages
     , flags : Flags
     , zone : Zone
+    , filter : String
     }
 
 
@@ -70,6 +71,7 @@ type Msg
     | Toggle DebugMessages.Key Expandable.Key
     | ParsingError String
     | GetZone Zone
+    | FilterChanged String
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -77,6 +79,7 @@ init flags =
     ( { messages = DebugMessages.init
       , flags = flags
       , zone = Time.utc
+      , filter = ""
       }
     , Task.perform GetZone Time.here
     )
@@ -87,6 +90,9 @@ update msg model =
     case msg of
         GetZone zone ->
             ( { model | zone = zone }, Cmd.none )
+
+        FilterChanged filter ->
+            ( { model | filter = filter }, Cmd.none )
 
         LogReceived ( isoTime, log ) ->
             let
@@ -238,24 +244,28 @@ view model =
 
         messages =
             DebugMessages.messages model.messages
-                |> List.map
+                |> List.filterMap
                     (\{ tag, value, count, key, time } ->
-                        Html.div
-                            [ Attrs.css
-                                [ Css.marginBottom (Css.px 12)
-                                , Css.backgroundColor colors.panelBackground
-                                , Css.color colors.foreground
-                                , Css.padding2 (Css.px 8) (Css.px 12)
-                                ]
-                            ]
-                            [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime time) value ]
+                        if String.isEmpty model.filter || String.contains (String.toLower model.filter) (String.toLower tag) then
+                            Just <|
+                                Html.div
+                                    [ Attrs.css
+                                        [ Css.marginBottom (Css.px 12)
+                                        , Css.backgroundColor colors.panelBackground
+                                        , Css.color colors.foreground
+                                        , Css.padding2 (Css.px 8) (Css.px 12)
+                                        ]
+                                    ]
+                                    [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime time) value ]
+
+                        else
+                            Nothing
                     )
     in
     Html.styled Html.div
         [ Css.fontSize <| Css.px 12
         , Css.fontFamily <| Css.monospace
-
-        --, Css.backgroundColor colors.backgroundColor
+        , Css.backgroundColor colors.background
         , Css.flexGrow <| Css.int 1
         , Css.displayFlex
         , Css.flexDirection Css.column
@@ -286,6 +296,13 @@ view model =
                     ]
                 ]
                 [ Html.text "Clear all" ]
+            , Html.input
+                [ Attrs.css [ Css.padding2 (Css.px 4) (Css.px 8) ]
+                , Events.onInput FilterChanged
+                , Attrs.value model.filter
+                , Attrs.placeholder "Filter"
+                ]
+                []
             ]
         , Html.div
             [ Attrs.css

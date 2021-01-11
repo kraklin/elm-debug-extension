@@ -12,7 +12,14 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
   let globalOptions = result[globalStorageKey];
 
   if (globalOptions === undefined) {
-    globalOptions = {limit: 10000000, debug: false, simple_mode: true, devPanel: false}
+
+    globalOptions = {
+      limit: 10000000,
+      debug: false,
+      simple_mode: true,
+      devPanel: false
+    }
+
     browser.storage.sync.set({[globalStorageKey]: globalOptions});
   }
 
@@ -97,9 +104,13 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
   window.addEventListener(
     'message',
     (event) => {
+      if (!options.active) { return; }
+
       // We only accept messages from ourselves or from Ellie
       if (event.origin === "https://ellie-app.com" && event.data.tag === "LogReceived") {
-        console.log(event.data.contents.label + ": " + event.data.contents.body)
+        const message = event.data.contents.label + ": " + event.data.contents.body;
+        browser.runtime.sendMessage({ action: "ELM_LOG",  data: message});
+        console.log(message);
       }
       else if (event.source !== window) return;
 

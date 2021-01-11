@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Elm Debug Helper",
-  "version": "0.0.2",
+  "version": "0.2.0-alpha",
   "icons": {
     "16": "assets/icons/favicon-dark-16.png",
     "32": "assets/icons/favicon-dark-32.png",

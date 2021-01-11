@@ -270,6 +270,7 @@ type alias ColorTheme a =
         , customTypesColor : Css.Color
         , booleanColor : Css.Color
         , sequenceNameColor : Css.Color
+        , primary : Css.Color
     }
 
 
@@ -488,7 +489,7 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                     [ Attrs.css
                         [ Css.display Css.inlineBlock
                         , Css.color <| Css.hex "ffffff"
-                        , Css.backgroundColor <| Css.hex "ff00ff"
+                        , Css.backgroundColor colorTheme.primary
                         , Css.textAlign <| Css.center
                         , Css.borderRadius <| Css.px 14
                         , Css.padding2 (Css.px 0) (Css.px 8)

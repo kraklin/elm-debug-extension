@@ -63,10 +63,13 @@ init flags =
     let
         panelModel : Panel.Model
         panelModel =
-            { messages = DebugMessages.initWithCustomParser DebugParser.parseWithOptionalTag
-            , flags = Panel.defaultFlags
-            , zone = Time.utc
-            }
+            Panel.init Panel.defaultFlags
+                |> Tuple.first
+                |> (\m ->
+                        { m
+                            | messages = DebugMessages.initWithCustomParser DebugParser.parseWithOptionalTag
+                        }
+                   )
     in
     ( { input = ""
       , panelModel = panelModel

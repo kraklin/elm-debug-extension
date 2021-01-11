@@ -3,7 +3,7 @@ import {version} from '../../package.json';
 import {Elm} from './Panel.elm';
 
 // init
-const theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+const theme = browser.devtools.panels.themeName || "light";
 
 // elm part
 const app = Elm.Panel.init({
