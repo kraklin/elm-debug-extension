@@ -361,13 +361,6 @@ viewValueHeader colorTheme value =
                 [] ->
                     Html.text <| "[]"
 
-                [ singleton ] ->
-                    Html.span [] <|
-                        [ Html.text "[ "
-                        , viewValueHeader colorTheme singleton
-                        , Html.text " ]"
-                        ]
-
                 _ ->
                     Html.span []
                         [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
