@@ -12302,42 +12302,29 @@ var $author$project$Expandable$viewValueHeader = F2(
 				if (!children.b) {
 					return $rtfeldman$elm_css$Html$Styled$text('[]');
 				} else {
-					if (!children.b.b) {
-						var singleton = children.a;
-						return A2(
-							$rtfeldman$elm_css$Html$Styled$span,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text('[ '),
-									A2($author$project$Expandable$viewValueHeader, colorTheme, singleton),
-									$rtfeldman$elm_css$Html$Styled$text(' ]')
-								]));
-					} else {
-						return A2(
-							$rtfeldman$elm_css$Html$Styled$span,
-							_List_Nil,
-							_List_fromArray(
-								[
-									A2(
-									$rtfeldman$elm_css$Html$Styled$span,
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Html$Styled$Attributes$css(
-											_List_fromArray(
-												[
-													$rtfeldman$elm_css$Css$color(colorTheme.dB)
-												]))
-										]),
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Html$Styled$text(typeToString)
-										])),
-									$rtfeldman$elm_css$Html$Styled$text(
-									'(' + ($elm$core$String$fromInt(
-										$elm$core$List$length(children)) + ')'))
-								]));
-					}
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$rtfeldman$elm_css$Html$Styled$span,
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$Attributes$css(
+										_List_fromArray(
+											[
+												$rtfeldman$elm_css$Css$color(colorTheme.dB)
+											]))
+									]),
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$text(typeToString)
+									])),
+								$rtfeldman$elm_css$Html$Styled$text(
+								'(' + ($elm$core$String$fromInt(
+									$elm$core$List$length(children)) + ')'))
+							]));
 				}
 			case 12:
 				var recordValues = value.b;
