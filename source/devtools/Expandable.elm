@@ -274,6 +274,63 @@ type alias ColorTheme a =
     }
 
 
+viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> String -> ElmValue -> Html msg
+viewMessageHeader colorTheme toggleMsg count tag time value =
+    let
+        viewCount =
+            if count > 1 then
+                Html.span
+                    [ Attrs.css
+                        [ Css.display Css.inlineBlock
+                        , Css.color <| Css.hex "ffffff"
+                        , Css.backgroundColor colorTheme.primary
+                        , Css.textAlign <| Css.center
+                        , Css.borderRadius <| Css.px 14
+                        , Css.padding2 (Css.px 0) (Css.px 8)
+                        , Css.fontSize <| Css.px 10
+                        , Css.marginRight <| Css.px 4
+                        ]
+                    ]
+                    [ Html.text <| String.fromInt count ]
+
+            else
+                Html.text ""
+    in
+    Html.div
+        [ Attrs.css
+            [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
+            ]
+        ]
+        [ Html.div
+            [ Attrs.css
+                [ Css.displayFlex
+                , Css.alignItems Css.baseline
+                , Css.marginBottom <| Css.px 8
+                ]
+            ]
+            [ viewCount
+            , Html.span [ Attrs.css [ Css.flexGrow <| Css.int 1 ] ] [ Html.text tag ]
+            , Html.span
+                [ Attrs.css
+                    [ Css.fontSize <| Css.px 10
+                    , Css.color colorTheme.guidelinesColor
+                    , Css.textAlign Css.right
+                    ]
+                ]
+                [ Html.text time ]
+            ]
+        , Html.div
+            [ Attrs.css
+                [ Css.borderRadius <| Css.px 4
+                , Css.padding2 (Css.px 8) (Css.px 12)
+                , Css.backgroundColor colorTheme.valueBackgroundColor
+                ]
+            ]
+            [ valueHeader colorTheme toggleMsg [] Nothing value
+            ]
+        ]
+
+
 viewValueHeader : ColorTheme a -> ElmValue -> Html msg
 viewValueHeader colorTheme value =
     case value of
@@ -306,15 +363,10 @@ viewValueHeader colorTheme value =
 
                 [ singleton ] ->
                     Html.span [] <|
-                        if hasNestedValues singleton then
-                            [ Html.text "[…]"
-                            ]
-
-                        else
-                            [ Html.text "[ "
-                            , viewValueHeader colorTheme singleton
-                            , Html.text " ]"
-                            ]
+                        [ Html.text "[ "
+                        , viewValueHeader colorTheme singleton
+                        , Html.text " ]"
+                        ]
 
                 _ ->
                     Html.span []
@@ -456,222 +508,155 @@ isValueOpened value =
             False
 
 
-toggableDiv colorTheme child toggleAttribute content =
-    if hasNestedValues child then
-        Html.div [] <|
+valueHeader : ColorTheme a -> (Key -> msg) -> Key -> Maybe (Html msg) -> ElmValue -> Html msg
+valueHeader colorTheme toggleMsg toggleKey maybeKey value =
+    let
+        viewValueContent =
+            if isValueOpened value then
+                Html.div [] [ viewValue colorTheme toggleMsg toggleKey value ]
+
+            else
+                Html.text ""
+
+        headerValue =
+            viewValueHeader colorTheme value
+
+        headerWithKey =
+            case maybeKey of
+                Nothing ->
+                    headerValue
+
+                Just key ->
+                    Html.span []
+                        [ key
+                        , Html.span [] [ Html.text ": " ]
+                        , headerValue
+                        ]
+
+        triangle =
             Html.div
                 [ Attrs.css
                     [ Css.display Css.inlineBlock
-                    , Css.cursor Css.pointer
                     , Css.width (Css.px 12)
                     , Css.color colorTheme.expandTriangleColor
                     ]
-                , toggleAttribute
                 ]
-                [ if isValueOpened child then
+                [ if isValueOpened value then
                     Html.text "▾"
 
                   else
                     Html.text "▸"
                 ]
-                :: content
+    in
+    if hasNestedValues value then
+        Html.div [] <|
+            [ Html.span
+                [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg toggleKey
+                , Attrs.css
+                    [ Css.cursor Css.pointer
+                    , Css.hover [ Css.backgroundColor <| colorTheme.valueBackgroundColor, Css.textDecoration Css.underline ]
+                    ]
+                ]
+                [ triangle, headerWithKey ]
+            , viewValueContent
+            ]
 
     else
-        Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] content
-
-
-viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> String -> ElmValue -> Html msg
-viewMessageHeader colorTheme toggleMsg count tag time value =
-    let
-        viewCount =
-            if count > 1 then
-                Html.span
-                    [ Attrs.css
-                        [ Css.display Css.inlineBlock
-                        , Css.color <| Css.hex "ffffff"
-                        , Css.backgroundColor colorTheme.primary
-                        , Css.textAlign <| Css.center
-                        , Css.borderRadius <| Css.px 14
-                        , Css.padding2 (Css.px 0) (Css.px 8)
-                        , Css.fontSize <| Css.px 10
-                        , Css.marginRight <| Css.px 4
-                        ]
-                    ]
-                    [ Html.text <| String.fromInt count ]
-
-            else
-                Html.text ""
-    in
-    Html.div
-        [ Attrs.css
-            [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
-            ]
-        ]
-        [ Html.div
-            [ Attrs.css
-                [ Css.displayFlex
-                , Css.alignItems Css.baseline
-                , Css.marginBottom <| Css.px 8
-                ]
-            ]
-            [ viewCount
-            , Html.span [ Attrs.css [ Css.flexGrow <| Css.int 1 ] ] [ Html.text tag ]
-            , Html.span
-                [ Attrs.css
-                    [ Css.fontSize <| Css.px 10
-                    , Css.color colorTheme.guidelinesColor
-                    , Css.textAlign Css.right
-                    ]
-                ]
-                [ Html.text time ]
-            ]
-        , Html.div
-            [ Attrs.css
-                [ Css.borderRadius <| Css.px 4
-                , Css.padding2 (Css.px 8) (Css.px 12)
-                , Css.backgroundColor colorTheme.valueBackgroundColor
-                ]
-            ]
-            [ toggableDiv colorTheme
-                value
-                (Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg [])
-                [ viewValue colorTheme toggleMsg [] value ]
-            ]
-        ]
+        Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] [ headerWithKey ]
 
 
 viewValue : ColorTheme a -> (Key -> msg) -> Key -> ElmValue -> Html msg
 viewValue colorTheme toggleMsg parentKey value =
     let
-        viewChildFn idx v =
-            viewValue colorTheme toggleMsg (parentKey ++ [ idx ]) v
+        toggleKey idx =
+            parentKey ++ [ idx ]
 
-        toggleCurrent idx =
-            Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg (parentKey ++ [ idx ])
-
-        viewFn =
-            viewValue colorTheme toggleMsg parentKey
-
-        childrenWrapper attrs children =
+        childrenWrapper children =
             Html.div
-                (Attrs.css
+                [ Attrs.css
                     [ Css.paddingLeft (Css.em 1)
                     , Css.marginLeft (Css.px 3)
                     , Css.borderLeft3 (Css.px 1) Css.solid colorTheme.guidelinesColor
                     ]
-                    :: attrs
-                )
+                ]
                 children
+
+        toggableDivWrapper idx child =
+            valueHeader colorTheme
+                toggleMsg
+                (toggleKey idx)
+                (Just <|
+                    Html.span
+                        [ Attrs.css
+                            [ Css.color colorTheme.keysColor
+                            , Css.fontStyle Css.italic
+                            ]
+                        ]
+                        [ Html.text <| String.fromInt idx ]
+                )
+                child
     in
     case value of
-        ElmTuple isOpened children ->
-            Html.span []
-                [ viewValueHeader colorTheme value
-                , if isOpened then
-                    childrenWrapper [] <|
-                        List.indexedMap
-                            (\idx child ->
-                                toggableDiv colorTheme child (toggleCurrent idx) [ viewChildFn idx child ]
-                            )
-                            children
+        ElmTuple _ children ->
+            children
+                |> List.indexedMap toggableDivWrapper
+                |> childrenWrapper
 
-                  else
-                    Html.text ""
-                ]
+        ElmSequence _ _ children ->
+            children
+                |> List.indexedMap toggableDivWrapper
+                |> childrenWrapper
 
-        ElmSequence _ isOpened children ->
-            Html.span []
-                [ viewValueHeader colorTheme value
-                , if isOpened then
-                    childrenWrapper [] <|
-                        List.indexedMap
-                            (\idx child ->
-                                toggableDiv colorTheme child (toggleCurrent idx) [ viewChildFn idx child ]
-                            )
-                            children
-
-                  else
-                    Html.text ""
-                ]
-
-        ElmRecord isOpened recordValues ->
-            Html.span []
-                [ viewValueHeader colorTheme value
-                , if isOpened then
-                    recordValues
-                        |> List.indexedMap
-                            (\idx ( key, child ) ->
-                                toggableDiv colorTheme
-                                    child
-                                    (toggleCurrent idx)
-                                    [ Html.span
-                                        [ Attrs.css
-                                            [ Css.color colorTheme.keysColor
-                                            , Css.fontStyle Css.italic
-                                            ]
+        ElmRecord _ recordValues ->
+            recordValues
+                |> List.indexedMap
+                    (\idx ( key, child ) ->
+                        valueHeader colorTheme
+                            toggleMsg
+                            (toggleKey idx)
+                            (Just <|
+                                Html.span
+                                    [ Attrs.css
+                                        [ Css.color colorTheme.keysColor
+                                        , Css.fontStyle Css.italic
                                         ]
-                                        [ Html.text key ]
-                                    , Html.text ": "
-                                    , viewChildFn idx child
                                     ]
+                                    [ Html.text key ]
                             )
-                        |> childrenWrapper []
+                            child
+                    )
+                |> childrenWrapper
 
-                  else
-                    Html.text ""
-                ]
-
-        ElmDict isOpened dictValues ->
-            Html.span []
-                [ viewValueHeader colorTheme value
-                , if isOpened then
-                    childrenWrapper [] <|
-                        List.indexedMap
-                            (\idx ( key, dictValue ) ->
-                                toggableDiv colorTheme
-                                    dictValue
-                                    (toggleCurrent idx)
-                                    [ viewFn key, Html.text ": ", viewChildFn idx dictValue ]
+        ElmDict _ dictValues ->
+            dictValues
+                |> List.indexedMap
+                    (\idx ( key, dictValue ) ->
+                        valueHeader colorTheme
+                            toggleMsg
+                            (toggleKey idx)
+                            (Just <|
+                                viewValueHeader colorTheme key
                             )
-                            dictValues
+                            dictValue
+                    )
+                |> childrenWrapper
 
-                  else
-                    Html.text ""
-                ]
-
-        ElmType isOpened name values ->
+        ElmType _ name values ->
             case values of
                 [] ->
                     Html.span [ Attrs.css [ Css.color colorTheme.customTypesColor ] ] [ Html.text name ]
 
-                [ oneValue ] ->
-                    Html.span []
-                        [ viewValueHeader colorTheme value
-                        , if isOpened then
-                            childrenWrapper [] <|
-                                [ toggableDiv colorTheme
-                                    oneValue
-                                    (toggleCurrent 0)
-                                    [ viewChildFn 0 oneValue ]
-                                ]
-
-                          else
-                            Html.text ""
-                        ]
-
-                multipleValues ->
-                    if isOpened then
-                        Html.span
-                            [ Attrs.css [ Css.color colorTheme.customTypesColor ] ]
-                            [ Html.text name
-                            , childrenWrapper [] <|
-                                List.indexedMap (\idx c -> toggableDiv colorTheme c (toggleCurrent idx) [ viewChildFn idx c ]) multipleValues
-                            ]
-
-                    else
-                        Html.span
-                            [ Attrs.css [ Css.color colorTheme.customTypesColor ] ]
-                            [ Html.text name, Html.text " …" ]
+                children ->
+                    children
+                        |> List.indexedMap
+                            (\idx child ->
+                                valueHeader colorTheme
+                                    toggleMsg
+                                    (toggleKey idx)
+                                    Nothing
+                                    child
+                            )
+                        |> childrenWrapper
 
         _ ->
             viewValueHeader colorTheme value

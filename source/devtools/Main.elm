@@ -4,7 +4,6 @@ import Browser
 import Css
 import DebugMessages
 import DebugParser
-import Expandable
 import Html.Events.Extra as Events
 import Html.Extra as Html
 import Html.Styled as Html exposing (Html)
@@ -59,7 +58,7 @@ type Msg
 
 
 init : Value -> ( Model, Cmd Msg )
-init flags =
+init _ =
     let
         panelModel : Panel.Model
         panelModel =
