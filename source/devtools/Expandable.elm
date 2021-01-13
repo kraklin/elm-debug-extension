@@ -332,17 +332,32 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
 
 
 viewValueHeader : ColorTheme a -> ElmValue -> Html msg
-viewValueHeader colorTheme value =
+viewValueHeader =
+    viewValueHeaderInner 0
+
+
+viewValueHeaderInner : Int -> ColorTheme a -> ElmValue -> Html msg
+viewValueHeaderInner level colorTheme value =
+    let
+        viewValueFn =
+            viewValueHeaderInner (level + 1) colorTheme
+    in
     case value of
         ElmTuple _ children ->
-            Html.span []
-                [ Html.text "("
-                , Html.span []
-                    (List.map (viewValueHeader colorTheme) children
-                        |> List.intersperse (Html.text ", ")
-                    )
-                , Html.text ")"
-                ]
+            if level > 1 then
+                Html.span []
+                    [ Html.text "(…)"
+                    ]
+
+            else
+                Html.span []
+                    [ Html.text "("
+                    , Html.span []
+                        (List.map viewValueFn children
+                            |> List.intersperse (Html.text ", ")
+                        )
+                    , Html.text ")"
+                    ]
 
         ElmSequence seqType _ children ->
             let
@@ -357,28 +372,18 @@ viewValueHeader colorTheme value =
                         Array ->
                             "Array"
             in
-            case children of
-                [] ->
-                    Html.text <| "[]"
-
-                _ ->
-                    Html.span []
-                        [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
-                            [ Html.text typeToString
-                            ]
-                        , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
-                        ]
+            Html.span []
+                [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
+                    [ Html.text typeToString
+                    ]
+                , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
+                ]
 
         ElmRecord _ recordValues ->
-            Html.span
-                []
-                (case recordValues of
-                    [] ->
-                        [ Html.text "{}" ]
-
-                    [ ( name, singleValue ) ] ->
-                        [ Html.text "{ "
-                        , Html.span
+            let
+                keySpan name =
+                    Html.span []
+                        [ Html.span
                             [ Attrs.css
                                 [ Css.color colorTheme.keysColor
                                 , Css.fontStyle Css.italic
@@ -386,24 +391,48 @@ viewValueHeader colorTheme value =
                             ]
                             [ Html.text name ]
                         , Html.text ": "
-                        , viewValueHeader colorTheme singleValue
-                        , Html.text " }"
                         ]
-
-                    ( name, firstItem ) :: _ ->
-                        [ Html.text "{ "
-                        , Html.span
-                            [ Attrs.css
-                                [ Css.color colorTheme.keysColor
-                                , Css.fontStyle Css.italic
+            in
+            if level > 1 then
+                List.head recordValues
+                    |> Maybe.map
+                        (\( name, _ ) ->
+                            Html.span []
+                                [ Html.text "{ "
+                                , keySpan name
+                                , Html.text "… }"
                                 ]
+                        )
+                    |> Maybe.withDefault (Html.text "")
+
+            else
+                Html.span
+                    []
+                    (case recordValues of
+                        [] ->
+                            [ Html.text "{}" ]
+
+                        [ ( name, singleValue ) ] ->
+                            [ Html.text "{ "
+                            , keySpan name
+                            , viewValueFn singleValue
+                            , Html.text " }"
                             ]
-                            [ Html.text name ]
-                        , Html.text ": "
-                        , viewValueHeader colorTheme firstItem
-                        , Html.text ", … }"
-                        ]
-                )
+
+                        ( name, firstItem ) :: ( secName, secItem ) :: rest ->
+                            [ Html.text "{ "
+                            , keySpan name
+                            , viewValueFn firstItem
+                            , Html.text ", "
+                            , keySpan secName
+                            , viewValueFn secItem
+                            , if List.isEmpty rest then
+                                Html.text " }"
+
+                              else
+                                Html.text ", … }"
+                            ]
+                    )
 
         ElmDict _ dictValues ->
             Html.span []
@@ -414,6 +443,15 @@ viewValueHeader colorTheme value =
                 ]
 
         ElmType _ name values ->
+            let
+                isTypeWithValues value_ =
+                    case value_ of
+                        ElmType _ _ (_ :: _) ->
+                            True
+
+                        _ ->
+                            False
+            in
             case values of
                 [] ->
                     Html.span
@@ -427,17 +465,38 @@ viewValueHeader colorTheme value =
                             [ Attrs.css [ Css.color colorTheme.customTypesColor ]
                             ]
                             [ Html.text (name ++ " ") ]
-                        , viewValueHeader colorTheme oneValue
+                        , viewValueFn oneValue
                         ]
 
-                _ ->
+                first :: rest ->
                     Html.span []
-                        [ Html.span
+                        ([ Html.span
                             [ Attrs.css [ Css.color colorTheme.customTypesColor ]
                             ]
                             [ Html.text name ]
-                        , Html.text " …"
-                        ]
+                         , Html.text " "
+                         ]
+                            ++ (if level > 1 && (not <| List.isEmpty rest) then
+                                    [ Html.text "(", viewValueFn first, Html.text " … )" ]
+
+                                else if level > 0 then
+                                    [ Html.text "(", viewValueFn first, Html.text " … )" ]
+
+                                else
+                                    values
+                                        |> List.map
+                                            (\v ->
+                                                Html.span []
+                                                    (if isTypeWithValues v then
+                                                        [ Html.text "(", viewValueFn v, Html.text ")" ]
+
+                                                     else
+                                                        [ viewValueFn v ]
+                                                    )
+                                            )
+                                        |> List.intersperse (Html.text " ")
+                               )
+                        )
 
         ElmString str ->
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]

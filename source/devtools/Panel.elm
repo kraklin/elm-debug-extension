@@ -231,6 +231,8 @@ formattedTime zone posix =
         ++ toTwoDigits (Time.toMinute zone posix)
         ++ ":"
         ++ toTwoDigits (Time.toSecond zone posix)
+        ++ "."
+        ++ String.fromInt (Time.toMillis zone posix)
 
 
 view : Model -> Html Msg
