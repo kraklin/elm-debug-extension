@@ -32,7 +32,7 @@ type alias ThemeColors =
 -}
 lightTheme : ThemeColors
 lightTheme =
-    { background = Css.hex "f9f9f9"
+    { background = Css.hex "f8f8f8"
     , foreground = Css.hex "383a42"
     , buttonBackground = Css.hex "f0f0f0"
     , buttonForeground = Css.hex "383a42"

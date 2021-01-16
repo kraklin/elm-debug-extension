@@ -295,22 +295,9 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
 
             else
                 Html.text ""
-    in
-    Html.div
-        [ Attrs.css
-            [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
-            ]
-        ]
-        [ Html.div
-            [ Attrs.css
-                [ Css.displayFlex
-                , Css.alignItems Css.baseline
-                , Css.marginBottom <| Css.px 8
-                ]
-            ]
-            [ viewCount
-            , Html.span [ Attrs.css [ Css.flexGrow <| Css.int 1 ] ] [ Html.text tag ]
-            , Html.span
+
+        viewTime =
+            Html.span
                 [ Attrs.css
                     [ Css.fontSize <| Css.px 10
                     , Css.color colorTheme.guidelinesColor
@@ -318,16 +305,45 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                     ]
                 ]
                 [ Html.text time ]
+    in
+    Html.div
+        [ Attrs.css
+            [ Css.fontFamilies [ "IBM Plex Mono", "monospace" ]
+            , Css.fontSize <| Css.px 11
             ]
-        , Html.div
+        ]
+        [ Html.div
             [ Attrs.css
-                [ Css.borderRadius <| Css.px 4
-                , Css.padding2 (Css.px 8) (Css.px 12)
-                , Css.backgroundColor colorTheme.valueBackgroundColor
+                [ Css.displayFlex
+                , Css.alignItems Css.baseline
+                , Css.marginBottom <| Css.px 4
                 ]
+            , Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg []
             ]
-            [ valueHeader colorTheme toggleMsg [] Nothing value
+            [ triangle colorTheme (isValueOpened value)
+            , viewCount
+            , Html.span
+                [ Attrs.css
+                    [ Css.flexGrow <| Css.int 1
+                    , Css.fontSize <| Css.px 10
+                    ]
+                ]
+                [ Html.text tag ]
+            , viewTime
             ]
+        , viewValueHeader colorTheme value
+        , if isValueOpened value then
+            Html.div
+                [ Attrs.css
+                    [ Css.padding2 (Css.px 4) (Css.px 8)
+                    , Css.borderBottom3 (Css.px 1) Css.solid colorTheme.guidelinesColor
+                    ]
+                ]
+                [ viewValue colorTheme toggleMsg [] value
+                ]
+
+          else
+            Html.text ""
         ]
 
 
@@ -560,6 +576,23 @@ isValueOpened value =
             False
 
 
+triangle : ColorTheme a -> Bool -> Html msg
+triangle colorTheme isOpened =
+    Html.div
+        [ Attrs.css
+            [ Css.display Css.inlineBlock
+            , Css.width (Css.px 12)
+            , Css.color colorTheme.expandTriangleColor
+            ]
+        ]
+        [ if isOpened then
+            Html.text "▾"
+
+          else
+            Html.text "▸"
+        ]
+
+
 valueHeader : ColorTheme a -> (Key -> msg) -> Key -> Maybe (Html msg) -> ElmValue -> Html msg
 valueHeader colorTheme toggleMsg toggleKey maybeKey value =
     let
@@ -584,21 +617,6 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                         , Html.span [] [ Html.text ": " ]
                         , headerValue
                         ]
-
-        triangle =
-            Html.div
-                [ Attrs.css
-                    [ Css.display Css.inlineBlock
-                    , Css.width (Css.px 12)
-                    , Css.color colorTheme.expandTriangleColor
-                    ]
-                ]
-                [ if isValueOpened value then
-                    Html.text "▾"
-
-                  else
-                    Html.text "▸"
-                ]
     in
     if hasNestedValues value then
         Html.div [] <|
@@ -609,7 +627,7 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                     , Css.hover [ Css.backgroundColor <| colorTheme.valueBackgroundColor, Css.textDecoration Css.underline ]
                     ]
                 ]
-                [ triangle, headerWithKey ]
+                [ triangle colorTheme (isValueOpened value), headerWithKey ]
             , viewValueContent
             ]
 

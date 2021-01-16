@@ -11,7 +11,9 @@ import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events
 import Iso8601
 import Json.Decode exposing (Value)
+import Json.Encode as Encode
 import Panel exposing (Msg(..))
+import Random
 import Task
 import Time exposing (Posix, Zone)
 
@@ -37,7 +39,7 @@ bigGap =
 
 sampleData : String
 sampleData =
-    "Debug model: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], binaryTree = Node (Node (Leaf None) (Leaf None)) (Node (Leaf None) (Leaf None)), bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), custom = Complex [(1,Some \"text\" 1),(2,Recursive (Complex [])),(3,None),(4,With_Underscore1)], customRecord = WithRecord [{ age = 21, name = \"Joe\" }], dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, list = [Nothing,Just [\"String\"],Nothing,Nothing], listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }"
+    "Debug model: { random = \"<VALUE>\", array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], binaryTree = Node (Node (Leaf None) (Leaf None)) (Node (Leaf None) (Leaf None)), bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), custom = Complex [(1,Some \"text\" 1),(2,Recursive (Complex [])),(3,None),(4,With_Underscore1)], customRecord = WithRecord [{ age = 21, name = \"Joe\" }], dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, list = [Nothing,Just [\"String\"],Nothing,Nothing], listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }"
 
 
 type alias Model =
@@ -55,6 +57,8 @@ type Msg
     | ParseInput Posix
     | UseSampleData
     | GetZone Zone
+    | GenerateMultipleMessages
+    | AddMultipleMessages (List Int)
 
 
 init : Value -> ( Model, Cmd Msg )
@@ -116,6 +120,31 @@ update msg model =
 
         UseSampleData ->
             ( { model | input = sampleData }, Cmd.none )
+
+        GenerateMultipleMessages ->
+            ( model, Random.generate AddMultipleMessages <| Random.list 10 <| Random.int 1 10 )
+
+        AddMultipleMessages randomValues ->
+            let
+                time =
+                    "2020-08-22T12:22:13.356Z"
+
+                messages =
+                    randomValues
+                        |> List.map String.fromInt
+                        |> Encode.list
+                            (\rand ->
+                                Encode.object
+                                    [ ( "time", Encode.string time )
+                                    , ( "log", Encode.string <| String.replace "<VALUE>" rand sampleData )
+                                    ]
+                            )
+            in
+            ( model
+            , messages
+                |> (Task.succeed << PanelMsg << Panel.BulkLogReceived)
+                |> Task.perform identity
+            )
 
 
 subscriptions : Model -> Sub Msg
@@ -239,6 +268,21 @@ view model =
                                 , Events.onClick UseSampleData
                                 ]
                                 [ Html.text "Sample Data" ]
+                            , Html.button
+                                [ Attrs.css
+                                    [ Css.padding2 tinyGap smallGap
+                                    , Css.cursor Css.pointer
+                                    , Css.color <| Css.hex "035388"
+                                    , Css.backgroundColor <| Css.inherit
+                                    , Css.fontWeight Css.bold
+                                    , Css.borderWidth <| Css.px 0
+                                    , Css.hover
+                                        [ Css.color <| Css.hex "1992D4"
+                                        ]
+                                    ]
+                                , Events.onClick GenerateMultipleMessages
+                                ]
+                                [ Html.text "Generate 10 messages" ]
                             , Html.button
                                 [ Attrs.css
                                     [ Css.padding2 tinyGap smallGap

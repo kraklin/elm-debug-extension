@@ -252,10 +252,11 @@ view model =
                             Just <|
                                 Html.div
                                     [ Attrs.css
-                                        [ Css.marginBottom (Css.px 12)
-                                        , Css.backgroundColor colors.panelBackground
+                                        [ Css.backgroundColor colors.panelBackground
                                         , Css.color colors.foreground
                                         , Css.padding2 (Css.px 8) (Css.px 12)
+                                        , Css.marginBottom (Css.px 8)
+                                        , Css.boxShadow4 (Css.px 0) (Css.px 2) (Css.px 2) (Css.rgba 0 0 0 0.08)
                                         ]
                                     ]
                                     [ Expandable.viewMessageHeader colors (Toggle key) count tag (localTime time) value ]
