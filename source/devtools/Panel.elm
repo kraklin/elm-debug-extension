@@ -11,6 +11,7 @@ import Html.Styled.Events as Events
 import Iso8601
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
+import Json.Encode as Encode
 import List.Extra as List
 import Task
 import Theme exposing (Theme)
@@ -61,17 +62,26 @@ type alias Model =
     , flags : Flags
     , zone : Zone
     , filter : String
+    , attached : Bool
     }
 
 
 type Msg
-    = LogReceived ( String, String )
+    = NoOp
+    | LogReceived ( String, String )
     | BulkLogReceived Value
     | Clear
     | Toggle DebugMessages.Key Expandable.Key
     | ParsingError String
     | GetZone Zone
     | FilterChanged String
+    | ToggleAttached
+    | AutoscrollStopped
+
+
+messageListId : String
+messageListId =
+    "message-list"
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -80,14 +90,26 @@ init flags =
       , flags = flags
       , zone = Time.utc
       , filter = ""
+      , attached = True
       }
     , Task.perform GetZone Time.here
     )
 
 
+jumpToTheBottom : Cmd Msg
+jumpToTheBottom =
+    Cmd.none
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
+        AutoscrollStopped ->
+            ( { model | attached = False }, Cmd.none )
+
         GetZone zone ->
             ( { model | zone = zone }, Cmd.none )
 
@@ -162,7 +184,14 @@ update msg model =
             )
 
         Toggle key path ->
-            ( { model | messages = DebugMessages.toggleValue key path model.messages }, Cmd.none )
+            ( { model | messages = DebugMessages.toggleValue key path model.messages, attached = False }, Cmd.none )
+
+        ToggleAttached ->
+            if model.attached then
+                ( { model | attached = False }, Cmd.none )
+
+            else
+                ( { model | attached = True }, jumpToTheBottom )
 
 
 subscriptions : Model -> Sub Msg
@@ -264,6 +293,7 @@ view model =
                         else
                             Nothing
                     )
+                |> List.reverse
     in
     Html.styled Html.div
         [ Css.fontSize <| Css.px 12
@@ -299,6 +329,23 @@ view model =
                     ]
                 ]
                 [ Html.text "Clear all" ]
+            , Html.button
+                [ Events.onClick ToggleAttached
+                , Attrs.css
+                    [ Css.backgroundColor colors.buttonBackground
+                    , Css.color colors.buttonForeground
+                    , Css.padding2 (Css.px 4) (Css.px 8)
+                    , Css.hover
+                        [ Css.backgroundColor colors.primary
+                        ]
+                    ]
+                ]
+                [ if model.attached then
+                    Html.text "Deattach"
+
+                  else
+                    Html.text "Attach"
+                ]
             , Html.input
                 [ Attrs.css [ Css.padding2 (Css.px 4) (Css.px 8) ]
                 , Events.onInput FilterChanged
@@ -307,8 +354,21 @@ view model =
                 ]
                 []
             ]
-        , Html.div
-            [ Attrs.css
+        , Html.node "x-autoscroll-div"
+            [ Attrs.id messageListId
+            , Attrs.attribute "autoscroll" (Encode.encode 0 <| Encode.bool model.attached)
+            , Events.on "x-autoscroll-stopped"
+                (Decode.succeed AutoscrollStopped
+                    |> Decode.andThen
+                        (\msg ->
+                            if model.attached then
+                                Decode.succeed msg
+
+                            else
+                                Decode.fail "Autoscrolled already stopped"
+                        )
+                )
+            , Attrs.css
                 [ Css.padding <| Css.px 8
                 , Css.displayFlex
                 , Css.flexDirection Css.column

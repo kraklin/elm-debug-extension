@@ -1,9 +1,13 @@
+import '@webcomponents/custom-elements';
 import browser from 'webextension-polyfill';
 import {version} from '../../package.json';
 import {Elm} from './Panel.elm';
+import {AutoscrollDiv} from './autoscroll-div';
 
 // init
-const theme = browser.devtools.panels.themeName || "light";
+const theme = browser.devtools.panels.themeName ?? "light";
+
+customElements.define('x-autoscroll-div', AutoscrollDiv);
 
 // elm part
 const app = Elm.Panel.init({

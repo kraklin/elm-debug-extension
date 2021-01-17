@@ -1,11 +1,11 @@
 const path = require('path');
 const webpack = require('webpack');
 const ZipPlugin = require('zip-webpack-plugin');
-const TerserPlugin = require('terser-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 const ExtensionReloader = require('webpack-extension-reloader');
+const {ESBuildPlugin, ESBuildMinifyPlugin} = require('esbuild-loader');
 const WextManifestWebpackPlugin = require('wext-manifest-webpack-plugin');
 const FixStyleOnlyEntriesPlugin = require('webpack-fix-style-only-entries');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
@@ -82,22 +82,11 @@ module.exports = {
         },
       },
       {
-        test: /.(js|jsx)$/,
-        include: [path.resolve(__dirname, 'source/scripts')],
-        loader: 'babel-loader',
-
+        test: /\.js$/,
+        loader: 'esbuild-loader',
         options: {
-          plugins: ['syntax-dynamic-import'],
-
-          presets: [
-            [
-              '@babel/preset-env',
-              {
-                modules: false,
-              },
-            ],
-          ],
-        },
+          target: 'es2015'
+        }
       },
       {
         test: /\.scss$/,
@@ -195,21 +184,15 @@ module.exports = {
       chunks: ['popup'],
       filename: 'popup.html',
     }),
+    new ESBuildPlugin(),
     new CopyWebpackPlugin([{from: 'source/assets', to: 'assets'}]),
     extensionReloaderPlugin,
   ],
 
   optimization: {
     minimizer: [
-      new TerserPlugin({
-        cache: true,
-        parallel: true,
-        terserOptions: {
-          output: {
-            comments: false,
-          },
-        },
-        extractComments: false,
+      new ESBuildMinifyPlugin({
+        target: 'es2015'
       }),
       new OptimizeCSSAssetsPlugin({
         cssProcessorPluginOptions: {
