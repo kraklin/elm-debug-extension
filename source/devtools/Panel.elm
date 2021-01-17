@@ -1,6 +1,7 @@
 port module Panel exposing (Flags, Model, Msg(..), defaultFlags, init, main, update, view)
 
 import Browser
+import Browser.Dom as Dom
 import Css
 import DebugMessages exposing (AddMessageData, DebugMessages)
 import Expandable
@@ -62,7 +63,7 @@ type alias Model =
     , flags : Flags
     , zone : Zone
     , filter : String
-    , attached : Bool
+    , paused : Bool
     }
 
 
@@ -75,13 +76,9 @@ type Msg
     | ParsingError String
     | GetZone Zone
     | FilterChanged String
-    | ToggleAttached
+    | TogglePaused
     | AutoscrollStopped
-
-
-messageListId : String
-messageListId =
-    "message-list"
+    | ShowMoreMessages
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -90,15 +87,22 @@ init flags =
       , flags = flags
       , zone = Time.utc
       , filter = ""
-      , attached = True
+      , paused = True
       }
     , Task.perform GetZone Time.here
     )
 
 
+messagesDivId : String
+messagesDivId =
+    "debug-messages"
+
+
 jumpToTheBottom : Cmd Msg
 jumpToTheBottom =
-    Cmd.none
+    Dom.getViewportOf messagesDivId
+        |> Task.andThen (\info -> Dom.setViewportOf messagesDivId 0 info.scene.height)
+        |> Task.attempt (\_ -> NoOp)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,7 +112,12 @@ update msg model =
             ( model, Cmd.none )
 
         AutoscrollStopped ->
-            ( { model | attached = False }, Cmd.none )
+            ( { model
+                | paused = False
+                , messages = DebugMessages.setHoldOn model.messages
+              }
+            , Cmd.none
+            )
 
         GetZone zone ->
             ( { model | zone = zone }, Cmd.none )
@@ -184,14 +193,24 @@ update msg model =
             )
 
         Toggle key path ->
-            ( { model | messages = DebugMessages.toggleValue key path model.messages, attached = False }, Cmd.none )
+            ( { model
+                | messages =
+                    DebugMessages.toggleValue key path model.messages
+                        |> DebugMessages.setHoldOn
+                , paused = False
+              }
+            , Cmd.none
+            )
 
-        ToggleAttached ->
-            if model.attached then
-                ( { model | attached = False }, Cmd.none )
+        TogglePaused ->
+            if model.paused then
+                ( { model | paused = False, messages = DebugMessages.setHoldOn model.messages }, Cmd.none )
 
             else
-                ( { model | attached = True }, jumpToTheBottom )
+                ( { model | paused = True, messages = DebugMessages.setHoldOff model.messages }, jumpToTheBottom )
+
+        ShowMoreMessages ->
+            ( { model | messages = DebugMessages.mergeHoldOnQueue model.messages }, jumpToTheBottom )
 
 
 subscriptions : Model -> Sub Msg
@@ -264,6 +283,19 @@ formattedTime zone posix =
         ++ String.fromInt (Time.toMillis zone posix)
 
 
+buttonStyles : Theme.ThemeColors -> List Css.Style
+buttonStyles colors =
+    [ Css.backgroundColor colors.buttonBackground
+    , Css.color colors.buttonForeground
+    , Css.padding2 (Css.px 4) (Css.px 8)
+    , Css.marginRight (Css.px 4)
+    , Css.hover
+        [ Css.backgroundColor colors.primary
+        , Css.cursor Css.pointer
+        ]
+    ]
+
+
 view : Model -> Html Msg
 view model =
     let
@@ -294,12 +326,40 @@ view model =
                             Nothing
                     )
                 |> List.reverse
+
+        moreMessages =
+            let
+                moreMessagesCount =
+                    DebugMessages.holdOnQueueSize model.messages
+            in
+            if DebugMessages.isHoldOn model.messages && moreMessagesCount > 0 then
+                Html.div
+                    [ Attrs.css
+                        [ Css.displayFlex
+                        , Css.justifyContent Css.spaceBetween
+                        , Css.backgroundColor colors.panelBackground
+                        , Css.color colors.foreground
+                        , Css.padding2 (Css.px 8) (Css.px 12)
+                        , Css.marginBottom (Css.px 8)
+                        , Css.boxShadow4 (Css.px 0) (Css.px 2) (Css.px 2) (Css.rgba 0 0 0 0.08)
+                        ]
+                    ]
+                    [ Html.text <| String.fromInt moreMessagesCount ++ " more messages"
+                    , Html.button
+                        [ Attrs.css <| buttonStyles colors
+                        , Events.onClick ShowMoreMessages
+                        ]
+                        [ Html.text "Show More Messages"
+                        ]
+                    ]
+
+            else
+                Html.text ""
     in
     Html.styled Html.div
         [ Css.fontSize <| Css.px 12
         , Css.fontFamily <| Css.monospace
         , Css.backgroundColor colors.background
-        , Css.flexGrow <| Css.int 1
         , Css.displayFlex
         , Css.flexDirection Css.column
         , Css.position Css.absolute
@@ -315,36 +375,25 @@ view model =
                 , Css.backgroundColor colors.background
                 , Css.padding2 (Css.px 4) (Css.px 8)
                 , Css.width (Css.pct 100)
+                , Css.justifyContent Css.spaceBetween
                 ]
             ]
-            [ Html.button
-                [ Events.onClick Clear
-                , Attrs.css
-                    [ Css.backgroundColor colors.buttonBackground
-                    , Css.color colors.buttonForeground
-                    , Css.padding2 (Css.px 4) (Css.px 8)
-                    , Css.hover
-                        [ Css.backgroundColor colors.primary
-                        ]
+            [ Html.div []
+                [ Html.button
+                    [ Attrs.css <| buttonStyles colors
+                    , Events.onClick Clear
                     ]
-                ]
-                [ Html.text "Clear all" ]
-            , Html.button
-                [ Events.onClick ToggleAttached
-                , Attrs.css
-                    [ Css.backgroundColor colors.buttonBackground
-                    , Css.color colors.buttonForeground
-                    , Css.padding2 (Css.px 4) (Css.px 8)
-                    , Css.hover
-                        [ Css.backgroundColor colors.primary
-                        ]
+                    [ Html.text "Clear all" ]
+                , Html.button
+                    [ Attrs.css <| buttonStyles colors
+                    , Events.onClick TogglePaused
                     ]
-                ]
-                [ if model.attached then
-                    Html.text "Deattach"
+                    [ if model.paused then
+                        Html.text "Pause"
 
-                  else
-                    Html.text "Attach"
+                      else
+                        Html.text "Resume"
+                    ]
                 ]
             , Html.input
                 [ Attrs.css [ Css.padding2 (Css.px 4) (Css.px 8) ]
@@ -355,13 +404,13 @@ view model =
                 []
             ]
         , Html.node "x-autoscroll-div"
-            [ Attrs.id messageListId
-            , Attrs.attribute "autoscroll" (Encode.encode 0 <| Encode.bool model.attached)
+            [ Attrs.id messagesDivId
+            , Attrs.attribute "autoscroll" (Encode.encode 0 <| Encode.bool model.paused)
             , Events.on "x-autoscroll-stopped"
                 (Decode.succeed AutoscrollStopped
                     |> Decode.andThen
                         (\msg ->
-                            if model.attached then
+                            if model.paused then
                                 Decode.succeed msg
 
                             else
@@ -376,6 +425,7 @@ view model =
                 ]
             ]
             messages
+        , moreMessages
         ]
 
 
