@@ -318,10 +318,8 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                 , Css.alignItems Css.baseline
                 , Css.marginBottom <| Css.px 4
                 ]
-            , Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg []
             ]
-            [ triangle colorTheme (isValueOpened value)
-            , viewCount
+            [ viewCount
             , Html.span
                 [ Attrs.css
                     [ Css.flexGrow <| Css.int 1
@@ -331,19 +329,7 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                 [ Html.text tag ]
             , viewTime
             ]
-        , viewValueHeader colorTheme value
-        , if isValueOpened value then
-            Html.div
-                [ Attrs.css
-                    [ Css.padding2 (Css.px 4) (Css.px 8)
-                    , Css.borderBottom3 (Css.px 1) Css.solid colorTheme.guidelinesColor
-                    ]
-                ]
-                [ viewValue colorTheme toggleMsg [] value
-                ]
-
-          else
-            Html.text ""
+        , valueHeader colorTheme toggleMsg [] Nothing value
         ]
 
 

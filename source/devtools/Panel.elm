@@ -399,7 +399,7 @@ view model =
                 [ Attrs.css [ Css.padding2 (Css.px 4) (Css.px 8) ]
                 , Events.onInput FilterChanged
                 , Attrs.value model.filter
-                , Attrs.placeholder "Filter"
+                , Attrs.placeholder "Filter tags"
                 ]
                 []
             ]
