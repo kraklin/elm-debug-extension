@@ -115,3 +115,4 @@ dist/
 !.yarn/releases
 !.yarn/plugins
 .pnp.*
+elm-stuff/0.19.1
