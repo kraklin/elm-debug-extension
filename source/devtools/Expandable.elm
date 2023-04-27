@@ -47,12 +47,8 @@ valueDecoder =
                             |> andDecodeValueField Decode.string
 
                     "Number" ->
-                        Decode.oneOf
-                            [ Decode.succeed ElmInt
-                                |> andDecodeValueField Decode.int
-                            , Decode.succeed ElmFloat
-                                |> andDecodeValueField Decode.float
-                            ]
+                        Decode.succeed ElmNumber
+                            |> andDecodeValueField Decode.float
 
                     "Boolean" ->
                         Decode.succeed ElmBool
@@ -481,11 +477,8 @@ viewValueHeaderInner level colorTheme value =
         ElmChar str ->
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
-        ElmFloat float ->
+        ElmNumber float ->
             Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromFloat float ++ "f" ]
-
-        ElmInt int ->
-            Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromInt int ]
 
         ElmBool bool ->
             Html.span [ Attrs.css [ Css.color colorTheme.booleanColor ] ]

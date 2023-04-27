@@ -89,30 +89,27 @@ parseNumber =
     let
         number =
             P.number
-                { int = Just ElmInt
+                { int = Just (\num -> ElmNumber <| toFloat num)
                 , hex = Nothing
                 , binary = Nothing
                 , octal = Nothing
-                , float = Just ElmFloat
+                , float = Just ElmNumber
                 }
 
         negateNumber value =
             case value of
-                ElmFloat float ->
-                    ElmFloat (negate float)
-
-                ElmInt int ->
-                    ElmInt (negate int)
+                ElmNumber float ->
+                    ElmNumber (negate float)
 
                 _ ->
                     value
     in
     P.oneOf
-        [ P.succeed (ElmFloat (0 / 0))
+        [ P.succeed (ElmNumber (0 / 0))
             |. P.keyword "NaN"
-        , P.succeed (ElmFloat (1 / 0))
+        , P.succeed (ElmNumber (1 / 0))
             |. P.keyword "Infinity"
-        , P.succeed (ElmFloat -(1 / 0))
+        , P.succeed (ElmNumber -(1 / 0))
             |. P.keyword "-Infinity"
         , P.oneOf
             [ P.succeed negateNumber
@@ -337,10 +334,10 @@ parseTypeWithoutValue =
                         ElmBool False
 
                     "NaN" ->
-                        ElmFloat (0 / 0)
+                        ElmNumber (0 / 0)
 
                     "Infinity" ->
-                        ElmFloat (1 / 0)
+                        ElmNumber (1 / 0)
 
                     _ ->
                         ElmType False name []
@@ -396,10 +393,10 @@ parseCustomTypeWithoutValue =
                     ElmBool False
 
                 "NaN" ->
-                    ElmFloat (0 / 0)
+                    ElmNumber (0 / 0)
 
                 "Infinity" ->
-                    ElmFloat (1 / 0)
+                    ElmNumber (1 / 0)
 
                 _ ->
                     ElmType False name []
@@ -420,10 +417,10 @@ parseCustomType =
                         P.succeed (ElmBool False)
 
                     "NaN" ->
-                        P.succeed (ElmFloat (0 / 0))
+                        P.succeed (ElmNumber (0 / 0))
 
                     "Infinity" ->
-                        P.succeed (ElmFloat (1 / 0))
+                        P.succeed (ElmNumber (1 / 0))
 
                     _ ->
                         P.succeed

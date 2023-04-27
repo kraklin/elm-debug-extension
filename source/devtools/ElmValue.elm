@@ -10,8 +10,7 @@ type SequenceType
 type ElmValue
     = ElmString String
     | ElmChar Char
-    | ElmInt Int
-    | ElmFloat Float
+    | ElmNumber Float
     | ElmBool Bool
     | ElmFunction
     | ElmInternals
