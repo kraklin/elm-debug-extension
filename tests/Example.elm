@@ -59,7 +59,7 @@ fuzzInt =
 
 fuzzFloat : Fuzzer ( String, ElmValue )
 fuzzFloat =
-    Fuzz.floatRange -100 100
+    Fuzz.niceFloat
         |> Fuzz.map
             (\float ->
                 ( Debug.toString float, ElmNumber float )
