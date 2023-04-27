@@ -88,13 +88,17 @@ parseNumber : Parser ElmValue
 parseNumber =
     let
         number =
-            P.number
-                { int = Just (\num -> ElmNumber <| toFloat num)
-                , hex = Nothing
-                , binary = Nothing
-                , octal = Nothing
-                , float = Just ElmNumber
-                }
+            P.chompWhile (\char -> Char.isDigit char || char == '.' || char == '+' || char == 'e' || char == '-')
+                |> P.getChompedString
+                |> P.andThen
+                    (\str ->
+                        case String.toFloat str of
+                            Just float ->
+                                P.succeed (ElmNumber float)
+
+                            Nothing ->
+                                P.problem "Unable to parse number"
+                    )
 
         negateNumber value =
             case value of

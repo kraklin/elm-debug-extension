@@ -53,7 +53,7 @@ fuzzInt =
     Fuzz.int
         |> Fuzz.map
             (\int ->
-                ( Debug.toString (Debug.log "fuzzed int" int), ElmNumber (toFloat int) )
+                ( Debug.toString int, ElmNumber (toFloat int) )
             )
 
 
@@ -225,6 +225,7 @@ fuzzTypeName =
                 |> Fuzz.map String.fromList
     in
     Fuzz.map2 String.cons upperCaseGroup charsList
+        |> Fuzz.filter (\name -> not (List.member name [ "NaN, Infinity" ]))
 
 
 fuzzTypeWithoutValue : Fuzzer ( String, ElmValue )
