@@ -1,10 +1,10 @@
-module Example exposing (..)
+module Example exposing (fuzzSuite, suite)
 
 import DebugParser
-import Dict exposing (Dict)
-import Expandable exposing (ElmValue(..), SequenceType(..))
-import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
+import ElmValue exposing (ElmValue(..), SequenceType(..))
+import Expect
+import Fuzz exposing (Fuzzer, int, list)
+import Random exposing (maxInt)
 import Test exposing (..)
 
 
@@ -53,13 +53,13 @@ fuzzInt =
     Fuzz.int
         |> Fuzz.map
             (\int ->
-                ( Debug.toString int, ElmInt int )
+                ( Debug.toString (Debug.log "fuzzed int" int), ElmInt int )
             )
 
 
 fuzzFloat : Fuzzer ( String, ElmValue )
 fuzzFloat =
-    Fuzz.float
+    Fuzz.floatRange -100 100
         |> Fuzz.map
             (\float ->
                 if float == (round float |> toFloat) then
@@ -244,7 +244,7 @@ fuzzListValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "[" ++ String.join "," strList ++ "]", ElmSequence List False valList )
+                        ( "[" ++ String.join "," strList ++ "]", ElmSequence SeqList False valList )
                    )
             )
 
@@ -256,7 +256,7 @@ fuzzArrayValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Array.fromList [" ++ String.join "," strList ++ "]", ElmSequence Array False valList )
+                        ( "Array.fromList [" ++ String.join "," strList ++ "]", ElmSequence SeqArray False valList )
                    )
             )
 
@@ -268,7 +268,7 @@ fuzzSetValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Set.fromList [" ++ String.join "," strList ++ "]", ElmSequence Set False valList )
+                        ( "Set.fromList [" ++ String.join "," strList ++ "]", ElmSequence SeqSet False valList )
                    )
             )
 
@@ -320,7 +320,7 @@ fuzzRecord =
             Fuzz.list fuzzRecordEntry
 
         fuzzRecordEntry =
-            Fuzz.tuple ( fuzzVariableName, fuzzValue )
+            Fuzz.pair fuzzVariableName fuzzValue
     in
     Fuzz.map2
         (\firstEntry list ->
@@ -384,7 +384,7 @@ suite =
         , test "Empty list"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: []")
-                    (Ok { tag = "Debug", value = ElmSequence List False [] })
+                    (Ok { tag = "Debug", value = ElmSequence SeqList False [] })
             )
         , test "Parse bytes"
             (\_ ->
@@ -426,7 +426,7 @@ suite =
         , test "Parse nonstandard chars "
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
-                    (Ok { tag = "Debug", value = ElmSequence List False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+                    (Ok { tag = "Debug", value = ElmSequence SeqList False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
             )
         , describe "Multiple types"
             [ test "Just boolean"
@@ -520,6 +520,11 @@ suite =
                 "Debug with 2 numbers 7 chars like !_+))($ and emojis 💪 : { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = (), test = A { custom = B } }"
                     |> DebugParser.parse
                     |> Expect.ok
+            )
+        , test "Parse char with two backslashes "
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: ['\\t' ]")
+                    (Ok { tag = "Debug", value = ElmSequence SeqList False [ ElmChar '\t' ] })
             )
         ]
 

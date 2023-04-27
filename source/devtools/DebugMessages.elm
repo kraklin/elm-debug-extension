@@ -19,7 +19,8 @@ module DebugMessages exposing
 
 import DebugParser exposing (ParsedLog)
 import Dict exposing (Dict)
-import Expandable exposing (ElmValue)
+import ElmValue exposing (ElmValue)
+import Expandable
 import List.Extra as List
 import Murmur3
 import Time exposing (Posix)

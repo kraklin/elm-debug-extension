@@ -1,6 +1,6 @@
 module DebugParser exposing (..)
 
-import Expandable exposing (ElmValue(..), SequenceType(..))
+import ElmValue exposing (ElmValue(..), SequenceType(..))
 import Parser as P exposing ((|.), (|=), DeadEnd, Parser, Step(..))
 
 
@@ -86,6 +86,27 @@ parseTypeName =
 
 parseNumber : Parser ElmValue
 parseNumber =
+    let
+        number =
+            P.number
+                { int = Just ElmInt
+                , hex = Nothing
+                , binary = Nothing
+                , octal = Nothing
+                , float = Just ElmFloat
+                }
+
+        negateNumber value =
+            case value of
+                ElmFloat float ->
+                    ElmFloat (negate float)
+
+                ElmInt int ->
+                    ElmInt (negate int)
+
+                _ ->
+                    value
+    in
     P.oneOf
         [ P.succeed (ElmFloat (0 / 0))
             |. P.keyword "NaN"
@@ -94,19 +115,11 @@ parseNumber =
         , P.succeed (ElmFloat -(1 / 0))
             |. P.keyword "-Infinity"
         , P.oneOf
-            [ P.succeed negate
+            [ P.succeed negateNumber
                 |. P.symbol "-"
-                |= P.float
-            , P.float
+                |= number
+            , number
             ]
-            |> P.map
-                (\num ->
-                    if num == (round num |> toFloat) then
-                        ElmInt (round num)
-
-                    else
-                        ElmFloat num
-                )
         ]
 
 
@@ -132,7 +145,7 @@ parseList =
         }
         |> P.map
             (\listVal ->
-                ElmSequence List False listVal
+                ElmSequence SeqList False listVal
             )
 
 
@@ -148,7 +161,7 @@ parseArray =
         }
         |> P.map
             (\listVal ->
-                ElmSequence Array False listVal
+                ElmSequence SeqArray False listVal
             )
 
 
@@ -164,7 +177,7 @@ parseSet =
         }
         |> P.map
             (\listVal ->
-                ElmSequence Set False listVal
+                ElmSequence SeqSet False listVal
             )
 
 
@@ -284,11 +297,26 @@ parseChar =
             |. P.token "'\\''"
             |> P.map (\_ -> ElmChar '\'')
         , P.succeed identity
+            |. P.token "'\\t'"
+            |> P.map (\_ -> ElmChar '\t')
+        , P.succeed identity
+            |. P.token "'\\n'"
+            |> P.map (\_ -> ElmChar '\n')
+        , P.succeed identity
+            |. P.token "'\\v'"
+            |> P.map (\_ -> ElmChar '\u{000B}')
+        , P.succeed identity
+            |. P.token "'\\r'"
+            |> P.map (\_ -> ElmChar '\u{000D}')
+        , P.succeed identity
+            |. P.token "'\\0'"
+            |> P.map (\_ -> ElmChar '\u{0000}')
+        , P.succeed identity
             |. P.token "'"
             |= P.getChompedString (P.chompUntil "'")
             |. P.token "'"
             |> P.map
-                (String.toList >> List.head >> Maybe.withDefault 'x' >> ElmChar)
+                (String.toList >> List.reverse >> List.head >> Maybe.withDefault 'x' >> ElmChar)
         ]
 
 

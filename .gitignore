@@ -48,6 +48,7 @@ build/Release
 node_modules/
 jspm_packages/
 elm_stuff/
+elm-stuff/
 
 # TypeScript v1 declaration files
 typings/

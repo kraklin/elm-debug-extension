@@ -1,7 +1,5 @@
 module Expandable exposing
-    ( ElmValue(..)
-    , Key
-    , SequenceType(..)
+    ( Key
     , decodeParsedValue
     , logDecoder
     , map
@@ -11,6 +9,7 @@ module Expandable exposing
     )
 
 import Css
+import ElmValue exposing (ElmValue(..), SequenceType(..))
 import Html.Events as Events
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
@@ -18,30 +17,6 @@ import Html.Styled.Attributes as Attrs
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as Decode
 import List.Extra as List
-
-
-type SequenceType
-    = Set
-    | List
-    | Array
-
-
-type ElmValue
-    = ElmString String
-    | ElmChar Char
-    | ElmInt Int
-    | ElmFloat Float
-    | ElmBool Bool
-    | ElmFunction
-    | ElmInternals
-    | ElmUnit
-    | ElmFile String
-    | ElmBytes Int
-    | ElmSequence SequenceType Bool (List ElmValue)
-    | ElmTuple Bool (List ElmValue)
-    | ElmRecord Bool (List ( String, ElmValue ))
-    | ElmType Bool String (List ElmValue)
-    | ElmDict Bool (List ( ElmValue, ElmValue ))
 
 
 type alias Key =
@@ -88,15 +63,15 @@ valueDecoder =
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Set" ->
-                        Decode.succeed (ElmSequence Set False)
+                        Decode.succeed (ElmSequence SeqSet False)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "List" ->
-                        Decode.succeed (ElmSequence List False)
+                        Decode.succeed (ElmSequence SeqList False)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Array" ->
-                        Decode.succeed (ElmSequence Array False)
+                        Decode.succeed (ElmSequence SeqArray False)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Record" ->
@@ -365,13 +340,13 @@ viewValueHeaderInner level colorTheme value =
             let
                 typeToString =
                     case seqType of
-                        Set ->
+                        SeqSet ->
                             "Set"
 
-                        List ->
+                        SeqList ->
                             "List"
 
-                        Array ->
+                        SeqArray ->
                             "Array"
             in
             Html.span []
