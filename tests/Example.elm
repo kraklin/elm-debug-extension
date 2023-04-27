@@ -473,6 +473,11 @@ suite =
                 Expect.equal (DebugParser.parse "Debug: { a = A }")
                     (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "A" [] ) ] })
             )
+        , test "Custom type with the name NaN"
+            (\_ ->
+                Expect.equal (DebugParser.parse "Debug: { a = NaN }")
+                    (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "NaN" [] ) ] })
+            )
         , test "CustomType within custom type"
             (\_ ->
                 "msg: CrosstabBuilderStoreMsg (XBProjectsFetched { copiedFrom = Nothing })"
