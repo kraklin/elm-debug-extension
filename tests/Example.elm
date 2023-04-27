@@ -53,7 +53,7 @@ fuzzInt =
     Fuzz.int
         |> Fuzz.map
             (\int ->
-                ( Debug.toString (Debug.log "fuzzed int" int), ElmInt int )
+                ( Debug.toString (Debug.log "fuzzed int" int), ElmNumber (toFloat int) )
             )
 
 
@@ -62,19 +62,15 @@ fuzzFloat =
     Fuzz.floatRange -100 100
         |> Fuzz.map
             (\float ->
-                if float == (round float |> toFloat) then
-                    ( Debug.toString float, ElmInt (round float) )
-
-                else
-                    ( Debug.toString float, ElmFloat float )
+                ( Debug.toString float, ElmNumber float )
             )
 
 
 fuzzInfinity : Fuzzer ( String, ElmValue )
 fuzzInfinity =
     Fuzz.oneOf
-        [ Fuzz.constant ( "Infinity", ElmFloat (1 / 0) )
-        , Fuzz.constant ( "-Infinity", ElmFloat -(1 / 0) )
+        [ Fuzz.constant ( "Infinity", ElmNumber (1 / 0) )
+        , Fuzz.constant ( "-Infinity", ElmNumber -(1 / 0) )
         ]
 
 
@@ -379,7 +375,7 @@ suite =
         , test "Nested Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
-                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmInt 2, ElmUnit ] ] })
+                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmNumber 2, ElmUnit ] ] })
             )
         , test "Empty list"
             (\_ ->
@@ -406,7 +402,7 @@ suite =
                     |> Result.map
                         (\parsed ->
                             case parsed.value of
-                                ElmFloat a ->
+                                ElmNumber a ->
                                     isNaN a
 
                                 _ ->
@@ -460,12 +456,12 @@ suite =
                                     [ ElmType False
                                         "Just"
                                         [ ElmBool True
-                                        , ElmInt 12
+                                        , ElmNumber 12
                                         , ElmString "string"
                                         , ElmType False "Nothing" []
                                         ]
-                                    , ElmFloat (1 / 0)
-                                    , ElmFloat -(1 / 0)
+                                    , ElmNumber (1 / 0)
+                                    , ElmNumber -(1 / 0)
                                     ]
                             }
                         )
