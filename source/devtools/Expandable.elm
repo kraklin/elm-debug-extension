@@ -9,7 +9,7 @@ module Expandable exposing
     )
 
 import Css
-import ElmValue exposing (ElmValue(..), SequenceType(..))
+import DebugParser exposing (ElmValue(..), SequenceType(..))
 import Html.Events as Events
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)

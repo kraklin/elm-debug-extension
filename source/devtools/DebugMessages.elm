@@ -17,9 +17,8 @@ module DebugMessages exposing
     , toggleValue
     )
 
-import DebugParser exposing (ParsedLog)
+import DebugParser exposing (ElmValue, ParsedLog)
 import Dict exposing (Dict)
-import ElmValue exposing (ElmValue)
 import Expandable
 import List.Extra as List
 import Murmur3
