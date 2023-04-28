@@ -18,7 +18,7 @@ type ElmValue
     | ElmUnit
     | ElmFile String
     | ElmBytes Int
-    | ElmSequence SequenceType Bool (List ElmValue)
-    | ElmRecord Bool (List ( String, ElmValue ))
+    | ElmSequence Bool SequenceType (List ElmValue)
     | ElmType Bool String (List ElmValue)
+    | ElmRecord Bool (List ( String, ElmValue ))
     | ElmDict Bool (List ( ElmValue, ElmValue ))

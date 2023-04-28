@@ -4,7 +4,6 @@ import DebugParser
 import ElmValue exposing (ElmValue(..), SequenceType(..))
 import Expect
 import Fuzz exposing (Fuzzer, int, list)
-import Random exposing (maxInt)
 import Test exposing (..)
 
 
@@ -163,7 +162,7 @@ fuzzTuple : Fuzzer ( String, ElmValue )
 fuzzTuple =
     let
         buildTuple ( fstStr, fstVal ) ( sndStr, sndVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ElmSequence SeqTuple False [ fstVal, sndVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ElmSequence False SeqTuple [ fstVal, sndVal ] )
 
         tupleValue next =
             Fuzz.oneOf
@@ -185,7 +184,7 @@ fuzzTriplet : Fuzzer ( String, ElmValue )
 fuzzTriplet =
     let
         buildTriplet ( fstStr, fstVal ) ( sndStr, sndVal ) ( rdStr, rdVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", ElmSequence SeqTuple False [ fstVal, sndVal, rdVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", ElmSequence False SeqTuple [ fstVal, sndVal, rdVal ] )
 
         tripletValue next =
             Fuzz.oneOf [ fuzzValue, next, fuzzTuple ]
@@ -241,7 +240,7 @@ fuzzListValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "[" ++ String.join "," strList ++ "]", ElmSequence SeqList False valList )
+                        ( "[" ++ String.join "," strList ++ "]", ElmSequence False SeqList valList )
                    )
             )
 
@@ -253,7 +252,7 @@ fuzzArrayValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Array.fromList [" ++ String.join "," strList ++ "]", ElmSequence SeqArray False valList )
+                        ( "Array.fromList [" ++ String.join "," strList ++ "]", ElmSequence False SeqArray valList )
                    )
             )
 
@@ -265,7 +264,7 @@ fuzzSetValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Set.fromList [" ++ String.join "," strList ++ "]", ElmSequence SeqSet False valList )
+                        ( "Set.fromList [" ++ String.join "," strList ++ "]", ElmSequence False SeqSet valList )
                    )
             )
 
@@ -371,17 +370,17 @@ suite =
         , test "Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,False)")
-                    (Ok { tag = "Debug", value = ElmSequence SeqTuple False [ ElmBool True, ElmBool False ] })
+                    (Ok { tag = "Debug", value = ElmSequence False SeqTuple [ ElmBool True, ElmBool False ] })
             )
         , test "Nested Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
-                    (Ok { tag = "Debug", value = ElmSequence SeqTuple False [ ElmBool True, ElmSequence SeqTuple False [ ElmNumber 2, ElmUnit ] ] })
+                    (Ok { tag = "Debug", value = ElmSequence False SeqTuple [ ElmBool True, ElmSequence False SeqTuple [ ElmNumber 2, ElmUnit ] ] })
             )
         , test "Empty list"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: []")
-                    (Ok { tag = "Debug", value = ElmSequence SeqList False [] })
+                    (Ok { tag = "Debug", value = ElmSequence False SeqList [] })
             )
         , test "Parse bytes"
             (\_ ->
@@ -423,7 +422,7 @@ suite =
         , test "Parse nonstandard chars "
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
-                    (Ok { tag = "Debug", value = ElmSequence SeqList False [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+                    (Ok { tag = "Debug", value = ElmSequence False SeqList [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
             )
         , describe "Multiple types"
             [ test "Just boolean"
@@ -521,7 +520,7 @@ suite =
         , test "Parse char with two backslashes "
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: ['\\t' ]")
-                    (Ok { tag = "Debug", value = ElmSequence SeqList False [ ElmChar '\t' ] })
+                    (Ok { tag = "Debug", value = ElmSequence False SeqList [ ElmChar '\t' ] })
             )
         ]
 

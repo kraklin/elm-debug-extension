@@ -146,7 +146,7 @@ parseList =
         }
         |> P.map
             (\listVal ->
-                ElmSequence SeqList False listVal
+                ElmSequence False SeqList listVal
             )
 
 
@@ -162,7 +162,7 @@ parseArray =
         }
         |> P.map
             (\listVal ->
-                ElmSequence SeqArray False listVal
+                ElmSequence False SeqArray listVal
             )
 
 
@@ -178,7 +178,7 @@ parseSet =
         }
         |> P.map
             (\listVal ->
-                ElmSequence SeqSet False listVal
+                ElmSequence False SeqSet listVal
             )
 
 
@@ -474,11 +474,11 @@ parseValueWithParenthesis =
                                                     |= P.lazy (\_ -> parseValue)
                                                     |> P.map
                                                         (\rdValue ->
-                                                            ElmSequence SeqTuple False [ fstValue, sndValue, rdValue ]
+                                                            ElmSequence False SeqTuple [ fstValue, sndValue, rdValue ]
                                                         )
                                                 , -- ("x", "y")
                                                   P.succeed
-                                                    (ElmSequence SeqTuple False [ fstValue, sndValue ])
+                                                    (ElmSequence False SeqTuple [ fstValue, sndValue ])
                                                 ]
                                     )
                             , P.succeed fstValue

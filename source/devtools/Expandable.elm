@@ -55,19 +55,19 @@ valueDecoder =
                             |> andDecodeValueField Decode.bool
 
                     "Tuple" ->
-                        Decode.succeed (ElmSequence SeqTuple False)
+                        Decode.succeed (ElmSequence False SeqTuple)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Set" ->
-                        Decode.succeed (ElmSequence SeqSet False)
+                        Decode.succeed (ElmSequence False SeqSet)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "List" ->
-                        Decode.succeed (ElmSequence SeqList False)
+                        Decode.succeed (ElmSequence False SeqList)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Array" ->
-                        Decode.succeed (ElmSequence SeqArray False)
+                        Decode.succeed (ElmSequence False SeqArray)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Record" ->
@@ -159,8 +159,8 @@ hasNestedValues value =
 toggle : ElmValue -> ElmValue
 toggle value =
     case value of
-        ElmSequence seq isOpened values ->
-            ElmSequence seq (not isOpened) values
+        ElmSequence isOpened seq values ->
+            ElmSequence (not isOpened) seq values
 
         ElmRecord isOpened values ->
             ElmRecord (not isOpened) values
@@ -307,7 +307,7 @@ viewValueHeaderInner level colorTheme value =
             viewValueHeaderInner (level + 1) colorTheme
     in
     case value of
-        ElmSequence seqType _ children ->
+        ElmSequence _ seqType children ->
             let
                 typeToString =
                     case seqType of
@@ -507,7 +507,7 @@ viewValueHeaderInner level colorTheme value =
 isValueOpened : ElmValue -> Bool
 isValueOpened value =
     case value of
-        ElmSequence _ isOpened _ ->
+        ElmSequence isOpened _ _ ->
             isOpened
 
         ElmRecord isOpened _ ->
