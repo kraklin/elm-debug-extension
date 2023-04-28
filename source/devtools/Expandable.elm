@@ -474,7 +474,7 @@ viewValueHeaderInner level colorTheme value =
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
         ElmNumber float ->
-            Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromFloat float ++ "f" ]
+            Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromFloat float ]
 
         ElmBool bool ->
             Html.span [ Attrs.css [ Css.color colorTheme.booleanColor ] ]
