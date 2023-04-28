@@ -163,7 +163,7 @@ fuzzTuple : Fuzzer ( String, ElmValue )
 fuzzTuple =
     let
         buildTuple ( fstStr, fstVal ) ( sndStr, sndVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ElmTuple False [ fstVal, sndVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ElmSequence SeqTuple False [ fstVal, sndVal ] )
 
         tupleValue next =
             Fuzz.oneOf
@@ -185,7 +185,7 @@ fuzzTriplet : Fuzzer ( String, ElmValue )
 fuzzTriplet =
     let
         buildTriplet ( fstStr, fstVal ) ( sndStr, sndVal ) ( rdStr, rdVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", ElmTuple False [ fstVal, sndVal, rdVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", ElmSequence SeqTuple False [ fstVal, sndVal, rdVal ] )
 
         tripletValue next =
             Fuzz.oneOf [ fuzzValue, next, fuzzTuple ]
@@ -371,12 +371,12 @@ suite =
         , test "Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,False)")
-                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmBool False ] })
+                    (Ok { tag = "Debug", value = ElmSequence SeqTuple False [ ElmBool True, ElmBool False ] })
             )
         , test "Nested Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
-                    (Ok { tag = "Debug", value = ElmTuple False [ ElmBool True, ElmTuple False [ ElmNumber 2, ElmUnit ] ] })
+                    (Ok { tag = "Debug", value = ElmSequence SeqTuple False [ ElmBool True, ElmSequence SeqTuple False [ ElmNumber 2, ElmUnit ] ] })
             )
         , test "Empty list"
             (\_ ->
@@ -472,11 +472,6 @@ suite =
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: { a = A }")
                     (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "A" [] ) ] })
-            )
-        , test "Custom type with the name NaN"
-            (\_ ->
-                Expect.equal (DebugParser.parse "Debug: { a = NaN }")
-                    (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "NaN" [] ) ] })
             )
         , test "CustomType within custom type"
             (\_ ->

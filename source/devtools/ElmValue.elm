@@ -5,6 +5,7 @@ type SequenceType
     = SeqSet
     | SeqList
     | SeqArray
+    | SeqTuple
 
 
 type ElmValue
@@ -18,7 +19,6 @@ type ElmValue
     | ElmFile String
     | ElmBytes Int
     | ElmSequence SequenceType Bool (List ElmValue)
-    | ElmTuple Bool (List ElmValue)
     | ElmRecord Bool (List ( String, ElmValue ))
     | ElmType Bool String (List ElmValue)
     | ElmDict Bool (List ( ElmValue, ElmValue ))

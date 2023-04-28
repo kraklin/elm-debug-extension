@@ -474,11 +474,11 @@ parseValueWithParenthesis =
                                                     |= P.lazy (\_ -> parseValue)
                                                     |> P.map
                                                         (\rdValue ->
-                                                            ElmTuple False [ fstValue, sndValue, rdValue ]
+                                                            ElmSequence SeqTuple False [ fstValue, sndValue, rdValue ]
                                                         )
                                                 , -- ("x", "y")
                                                   P.succeed
-                                                    (ElmTuple False [ fstValue, sndValue ])
+                                                    (ElmSequence SeqTuple False [ fstValue, sndValue ])
                                                 ]
                                     )
                             , P.succeed fstValue

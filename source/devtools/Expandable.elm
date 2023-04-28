@@ -55,7 +55,7 @@ valueDecoder =
                             |> andDecodeValueField Decode.bool
 
                     "Tuple" ->
-                        Decode.succeed (ElmTuple False)
+                        Decode.succeed (ElmSequence SeqTuple False)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Set" ->
@@ -140,9 +140,6 @@ decodeParsedValue value =
 hasNestedValues : ElmValue -> Bool
 hasNestedValues value =
     case value of
-        ElmTuple _ _ ->
-            True
-
         ElmSequence _ _ values ->
             not <| List.isEmpty values
 
@@ -162,9 +159,6 @@ hasNestedValues value =
 toggle : ElmValue -> ElmValue
 toggle value =
     case value of
-        ElmTuple isOpened values ->
-            ElmTuple (not isOpened) values
-
         ElmSequence seq isOpened values ->
             ElmSequence seq (not isOpened) values
 
@@ -191,9 +185,6 @@ map key fn value =
     let
         mapNestedValue mapIndex mappedFn =
             case value of
-                ElmTuple a values ->
-                    ElmTuple a <| List.updateIfIndex ((==) mapIndex) mappedFn values
-
                 ElmSequence a b values ->
                     ElmSequence a b <| List.updateIfIndex ((==) mapIndex) mappedFn values
 
@@ -316,22 +307,6 @@ viewValueHeaderInner level colorTheme value =
             viewValueHeaderInner (level + 1) colorTheme
     in
     case value of
-        ElmTuple _ children ->
-            if level > 1 then
-                Html.span []
-                    [ Html.text "(…)"
-                    ]
-
-            else
-                Html.span []
-                    [ Html.text "("
-                    , Html.span []
-                        (List.map viewValueFn children
-                            |> List.intersperse (Html.text ", ")
-                        )
-                    , Html.text ")"
-                    ]
-
         ElmSequence seqType _ children ->
             let
                 typeToString =
@@ -344,13 +319,34 @@ viewValueHeaderInner level colorTheme value =
 
                         SeqArray ->
                             "Array"
+
+                        SeqTuple ->
+                            "Tuple"
             in
-            Html.span []
-                [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
-                    [ Html.text typeToString
-                    ]
-                , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
-                ]
+            case seqType of
+                SeqTuple ->
+                    if level > 1 then
+                        Html.span []
+                            [ Html.text "(…)"
+                            ]
+
+                    else
+                        Html.span []
+                            [ Html.text "("
+                            , Html.span []
+                                (List.map viewValueFn children
+                                    |> List.intersperse (Html.text ", ")
+                                )
+                            , Html.text ")"
+                            ]
+
+                _ ->
+                    Html.span []
+                        [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
+                            [ Html.text typeToString
+                            ]
+                        , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
+                        ]
 
         ElmRecord _ recordValues ->
             let
@@ -511,9 +507,6 @@ viewValueHeaderInner level colorTheme value =
 isValueOpened : ElmValue -> Bool
 isValueOpened value =
     case value of
-        ElmTuple isOpened _ ->
-            isOpened
-
         ElmSequence _ isOpened _ ->
             isOpened
 
@@ -621,11 +614,6 @@ viewValue colorTheme toggleMsg parentKey value =
                 child
     in
     case value of
-        ElmTuple _ children ->
-            children
-                |> List.indexedMap toggableDivWrapper
-                |> childrenWrapper
-
         ElmSequence _ _ children ->
             children
                 |> List.indexedMap toggableDivWrapper
