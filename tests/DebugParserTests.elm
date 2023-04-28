@@ -1,6 +1,7 @@
-module Example exposing (fuzzSuite, suite)
+module DebugParserTests exposing (fuzzSuite, suite)
 
-import DebugParser exposing (ElmValue(..), SequenceType(..))
+import DebugParser
+import DebugParser.ElmValue exposing (ElmValue(..), SequenceType(..))
 import Expect
 import Fuzz exposing (Fuzzer, int, list)
 import Test exposing (..)
@@ -154,6 +155,8 @@ fuzzValue =
         , fuzzChar
         , fuzzTypeWithoutValue
         , fuzzCustomType
+        , fuzzListValue fuzzString
+        , fuzzArrayValue fuzzNumber
         ]
 
 

@@ -17,7 +17,8 @@ module DebugMessages exposing
     , toggleValue
     )
 
-import DebugParser exposing (ElmValue, ParsedLog)
+import DebugParser exposing (ParsedLog)
+import DebugParser.ElmValue as ElmValue exposing (ElmValue)
 import Dict exposing (Dict)
 import Expandable
 import List.Extra as List
@@ -286,7 +287,7 @@ toggleValue key path (DebugMessages data) =
     let
         toggleValue_ storeMessage =
             { storeMessage
-                | value = Expandable.mapValue path DebugParser.toggle storeMessage.value
+                | value = Expandable.mapValue path ElmValue.toggle storeMessage.value
             }
     in
     DebugMessages

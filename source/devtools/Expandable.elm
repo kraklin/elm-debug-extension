@@ -8,7 +8,7 @@ module Expandable exposing
     )
 
 import Css
-import DebugParser exposing (ElmValue(..), SequenceType(..))
+import DebugParser.ElmValue as ElmValue exposing (ElmValue(..), SequenceType(..))
 import Html.Events as Events
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
@@ -521,7 +521,7 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                         , headerValue
                         ]
     in
-    if DebugParser.hasNestedValues value then
+    if ElmValue.hasNestedValues value then
         Html.div [] <|
             [ Html.span
                 [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg toggleKey
