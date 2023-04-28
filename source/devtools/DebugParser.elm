@@ -32,6 +32,49 @@ type ElmValue
     | ElmDict Bool (List ( ElmValue, ElmValue ))
 
 
+hasNestedValues : ElmValue -> Bool
+hasNestedValues value =
+    case value of
+        ElmSequence _ _ values ->
+            not <| List.isEmpty values
+
+        ElmRecord _ _ ->
+            True
+
+        ElmDict _ values ->
+            not <| List.isEmpty values
+
+        ElmType _ _ values ->
+            not <| List.isEmpty values
+
+        _ ->
+            False
+
+
+toggle : ElmValue -> ElmValue
+toggle value =
+    case value of
+        ElmSequence isOpened seq values ->
+            ElmSequence (not isOpened) seq values
+
+        ElmRecord isOpened values ->
+            ElmRecord (not isOpened) values
+
+        ElmDict isOpened values ->
+            ElmDict (not isOpened) values
+
+        ElmType isOpened name values ->
+            case values of
+                [] ->
+                    value
+
+                _ ->
+                    ElmType (not isOpened) name values
+
+        _ ->
+            value
+
+
 {-| dead ends to string function is still not implemented in Parser library, so I had to copy paste this from another PR. :(
 -}
 deadEndsToString : List P.DeadEnd -> String

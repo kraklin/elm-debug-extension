@@ -2,8 +2,7 @@ module Expandable exposing
     ( Key
     , decodeParsedValue
     , logDecoder
-    , map
-    , toggle
+    , mapValue
     , viewMessageHeader
     , viewValue
     )
@@ -137,51 +136,27 @@ decodeParsedValue value =
 -- Data structure actions
 
 
-hasNestedValues : ElmValue -> Bool
-hasNestedValues value =
+isValueExpanded : ElmValue -> Bool
+isValueExpanded value =
     case value of
-        ElmSequence _ _ values ->
-            not <| List.isEmpty values
+        ElmSequence isOpened _ _ ->
+            isOpened
 
-        ElmRecord _ _ ->
-            True
+        ElmRecord isOpened _ ->
+            isOpened
 
-        ElmDict _ values ->
-            not <| List.isEmpty values
+        ElmDict isOpened _ ->
+            isOpened
 
-        ElmType _ _ values ->
-            not <| List.isEmpty values
+        ElmType isOpened _ _ ->
+            isOpened
 
         _ ->
             False
 
 
-toggle : ElmValue -> ElmValue
-toggle value =
-    case value of
-        ElmSequence isOpened seq values ->
-            ElmSequence (not isOpened) seq values
-
-        ElmRecord isOpened values ->
-            ElmRecord (not isOpened) values
-
-        ElmDict isOpened values ->
-            ElmDict (not isOpened) values
-
-        ElmType isOpened name values ->
-            case values of
-                [] ->
-                    value
-
-                _ ->
-                    ElmType (not isOpened) name values
-
-        _ ->
-            value
-
-
-map : Key -> (ElmValue -> ElmValue) -> ElmValue -> ElmValue
-map key fn value =
+mapValue : Key -> (ElmValue -> ElmValue) -> ElmValue -> ElmValue
+mapValue key fn value =
     let
         mapNestedValue mapIndex mappedFn =
             case value of
@@ -213,7 +188,7 @@ map key fn value =
             mapNestedValue idx fn
 
         idx :: rest ->
-            mapNestedValue idx (map rest fn)
+            mapNestedValue idx (mapValue rest fn)
 
 
 
@@ -504,25 +479,6 @@ viewValueHeaderInner level colorTheme value =
             Html.text <| String.fromInt count ++ "B"
 
 
-isValueOpened : ElmValue -> Bool
-isValueOpened value =
-    case value of
-        ElmSequence isOpened _ _ ->
-            isOpened
-
-        ElmRecord isOpened _ ->
-            isOpened
-
-        ElmDict isOpened _ ->
-            isOpened
-
-        ElmType isOpened _ _ ->
-            isOpened
-
-        _ ->
-            False
-
-
 triangle : ColorTheme a -> Bool -> Html msg
 triangle colorTheme isOpened =
     Html.div
@@ -544,7 +500,7 @@ valueHeader : ColorTheme a -> (Key -> msg) -> Key -> Maybe (Html msg) -> ElmValu
 valueHeader colorTheme toggleMsg toggleKey maybeKey value =
     let
         viewValueContent =
-            if isValueOpened value then
+            if isValueExpanded value then
                 Html.div [] [ viewValue colorTheme toggleMsg toggleKey value ]
 
             else
@@ -565,7 +521,7 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                         , headerValue
                         ]
     in
-    if hasNestedValues value then
+    if DebugParser.hasNestedValues value then
         Html.div [] <|
             [ Html.span
                 [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg toggleKey
@@ -574,7 +530,7 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                     , Css.hover [ Css.backgroundColor <| colorTheme.valueBackgroundColor, Css.textDecoration Css.underline ]
                     ]
                 ]
-                [ triangle colorTheme (isValueOpened value), headerWithKey ]
+                [ triangle colorTheme (isValueExpanded value), headerWithKey ]
             , viewValueContent
             ]
 

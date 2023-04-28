@@ -286,7 +286,7 @@ toggleValue key path (DebugMessages data) =
     let
         toggleValue_ storeMessage =
             { storeMessage
-                | value = Expandable.map path Expandable.toggle storeMessage.value
+                | value = Expandable.mapValue path DebugParser.toggle storeMessage.value
             }
     in
     DebugMessages
