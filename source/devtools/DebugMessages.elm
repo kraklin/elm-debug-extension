@@ -220,7 +220,7 @@ bulkAdd bulkList (DebugMessages data) =
                 |> List.map (\messageData -> ( messageHash messageData.log, messageData ))
                 |> List.groupWhile (\v1 v2 -> Tuple.first v1 == Tuple.first v2)
                 |> List.map (\( v, list ) -> ( v, List.length list + 1 ))
-                |> List.map
+                |> List.filterMap
                     (\( ( hash, { log, timestamp } ), count ) ->
                         case data.parseFn log of
                             Ok { tag, value } ->
@@ -235,7 +235,6 @@ bulkAdd bulkList (DebugMessages data) =
                             Err _ ->
                                 Nothing
                     )
-                |> List.filterMap identity
 
         newStore =
             parsedMessages
@@ -257,7 +256,7 @@ bulkAdd bulkList (DebugMessages data) =
 messages : DebugMessages -> List DebugMessage
 messages (DebugMessages data) =
     data.queue
-        |> List.map
+        |> List.filterMap
             (\( key, count ) ->
                 Dict.get key data.store
                     |> Maybe.map
@@ -270,7 +269,6 @@ messages (DebugMessages data) =
                             }
                         )
             )
-        |> List.filterMap identity
 
 
 holdOnQueueSize : DebugMessages -> Int

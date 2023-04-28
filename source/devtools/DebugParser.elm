@@ -239,7 +239,7 @@ stringHelp endString charCheckFn revChunks =
                 ]
         , P.oneOf
             [ P.token endString
-                |> P.map (\_ -> Done (Just <| String.join "" (List.reverse revChunks)))
+                |> P.map (\_ -> Done (Just <| String.concat (List.reverse revChunks)))
             , P.end
                 |> P.map (\_ -> Done Nothing)
             ]

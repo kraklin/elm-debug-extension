@@ -223,7 +223,7 @@ fuzzTypeName =
                 |> Fuzz.map String.fromList
     in
     Fuzz.map2 String.cons upperCaseGroup charsList
-        |> Fuzz.filter (\name -> not (List.member name [ "NaN, Infinity" ]))
+        |> Fuzz.filter (\name -> not (List.member name [ "NaN", "Infinity" ]))
 
 
 fuzzTypeWithoutValue : Fuzzer ( String, ElmValue )
