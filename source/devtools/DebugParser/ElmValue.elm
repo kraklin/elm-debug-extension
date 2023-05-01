@@ -1,4 +1,6 @@
-module DebugParser.ElmValue exposing (ElmValue(..), SequenceType(..), hasNestedValues, toggle)
+module DebugParser.ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..), hasNestedValues, toggle)
+
+import Html.Attributes exposing (value)
 
 
 type SequenceType
@@ -9,6 +11,11 @@ type SequenceType
 
 
 type ElmValue
+    = Plain PlainValue
+    | Expandable Bool ExpandableValue
+
+
+type PlainValue
     = ElmString String
     | ElmChar Char
     | ElmNumber Float
@@ -18,26 +25,31 @@ type ElmValue
     | ElmUnit
     | ElmFile String
     | ElmBytes Int
-    | ElmSequence Bool SequenceType (List ElmValue)
-    | ElmType Bool String (List ElmValue)
-    | ElmRecord Bool (List ( String, ElmValue ))
-    | ElmDict Bool (List ( ElmValue, ElmValue ))
+
+
+type ExpandableValue
+    = ElmSequence SequenceType (List ElmValue)
+    | ElmType String (List ElmValue)
+    | ElmRecord (List ( String, ElmValue ))
+    | ElmDict (List ( ElmValue, ElmValue ))
 
 
 hasNestedValues : ElmValue -> Bool
 hasNestedValues value =
     case value of
-        ElmSequence _ _ values ->
-            not <| List.isEmpty values
+        Expandable _ expandableValue ->
+            case expandableValue of
+                ElmSequence _ values ->
+                    not <| List.isEmpty values
 
-        ElmRecord _ _ ->
-            True
+                ElmRecord _ ->
+                    True
 
-        ElmDict _ values ->
-            not <| List.isEmpty values
+                ElmDict values ->
+                    not <| List.isEmpty values
 
-        ElmType _ _ values ->
-            not <| List.isEmpty values
+                ElmType _ values ->
+                    not <| List.isEmpty values
 
         _ ->
             False
@@ -46,22 +58,13 @@ hasNestedValues value =
 toggle : ElmValue -> ElmValue
 toggle value =
     case value of
-        ElmSequence isOpened seq values ->
-            ElmSequence (not isOpened) seq values
-
-        ElmRecord isOpened values ->
-            ElmRecord (not isOpened) values
-
-        ElmDict isOpened values ->
-            ElmDict (not isOpened) values
-
-        ElmType isOpened name values ->
-            case values of
-                [] ->
+        Expandable isOpened expandableValue ->
+            case expandableValue of
+                ElmType _ [] ->
                     value
 
                 _ ->
-                    ElmType (not isOpened) name values
+                    Expandable (not isOpened) expandableValue
 
         _ ->
             value
