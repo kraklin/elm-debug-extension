@@ -1,11 +1,11 @@
-module DebugParser.ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..), hasNestedValues, toggle)
-
-
-type SequenceType
-    = SeqSet
-    | SeqList
-    | SeqArray
-    | SeqTuple
+module DebugParser.ElmValue exposing
+    ( ElmValue(..)
+    , ExpandableValue(..)
+    , PlainValue(..)
+    , SequenceType(..)
+    , hasNestedValues
+    , toggle
+    )
 
 
 type ElmValue
@@ -30,6 +30,13 @@ type ExpandableValue
     | ElmType String (List ElmValue)
     | ElmRecord (List ( String, ElmValue ))
     | ElmDict (List ( ElmValue, ElmValue ))
+
+
+type SequenceType
+    = SeqSet
+    | SeqList
+    | SeqArray
+    | SeqTuple
 
 
 hasNestedValues : ElmValue -> Bool
