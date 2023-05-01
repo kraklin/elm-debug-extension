@@ -1,7 +1,5 @@
 module DebugParser.ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..), hasNestedValues, toggle)
 
-import Html.Attributes exposing (value)
-
 
 type SequenceType
     = SeqSet

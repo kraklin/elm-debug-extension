@@ -4,8 +4,6 @@ import Browser
 import Css
 import DebugMessages
 import DebugParser
-import Html.Events.Extra as Events
-import Html.Extra as Html
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events

@@ -5,7 +5,6 @@ import Browser.Dom as Dom
 import Css
 import DebugMessages exposing (AddMessageData, DebugMessages)
 import Expandable
-import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
 import Html.Styled.Events as Events
@@ -13,7 +12,6 @@ import Iso8601
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import Json.Encode as Encode
-import List.Extra as List
 import Task
 import Theme exposing (Theme)
 import Time exposing (Month(..), Posix, Zone)

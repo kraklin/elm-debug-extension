@@ -9,7 +9,6 @@ module Expandable exposing
 
 import Css
 import DebugParser.ElmValue as ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..))
-import Html.Events as Events
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs

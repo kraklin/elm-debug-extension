@@ -160,18 +160,6 @@ add { timestamp, log } (DebugMessages data) =
 
         increaseLastCount queue =
             List.updateAt 0 (Tuple.mapSecond (\s -> s + 1)) queue
-
-        updateQueues data_ =
-            if data_.holdOn then
-                { data_
-                    | holdOnQueue = ( dictKey, 1 ) :: data_.holdOnQueue
-                }
-
-            else if lastHash == Just hash then
-                { data_ | queue = increaseLastCount data_.queue }
-
-            else
-                { data_ | queue = ( dictKey, 1 ) :: data_.queue }
     in
     if data.holdOn then
         if lastHoldOnHash == Just hash then
