@@ -498,7 +498,7 @@ suite =
             )
         , test "CustomType within custom type"
             (\_ ->
-                "msg: CrosstabBuilderStoreMsg (XBProjectsFetched { copiedFrom = Nothing })"
+                "msg: StoreMsg (Fetched { copiedFrom = Nothing })"
                     |> DebugParser.parse
                     |> Expect.equal
                         (Ok
@@ -506,10 +506,10 @@ suite =
                             , value =
                                 Expandable False <|
                                     ElmType
-                                        "CrosstabBuilderStoreMsg"
+                                        "StoreMsg"
                                         [ Expandable False <|
                                             ElmType
-                                                "XBProjectsFetched"
+                                                "Fetched"
                                                 [ Expandable False <| ElmRecord [ ( "copiedFrom", Expandable False <| ElmType "Nothing" [] ) ]
                                                 ]
                                         ]
