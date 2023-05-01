@@ -337,29 +337,6 @@ parseChar =
 {--Record parser --}
 
 
-parseTypeWithoutValue : Parser ElmValue
-parseTypeWithoutValue =
-    parseTypeName
-        |> P.map
-            (\name ->
-                case name of
-                    "True" ->
-                        Plain <| ElmBool True
-
-                    "False" ->
-                        Plain <| ElmBool False
-
-                    "NaN" ->
-                        Plain <| ElmNumber (0 / 0)
-
-                    "Infinity" ->
-                        Plain <| ElmNumber (1 / 0)
-
-                    _ ->
-                        Expandable False <| ElmType name []
-            )
-
-
 parseRecord : Parser ElmValue
 parseRecord =
     P.sequence
@@ -537,12 +514,6 @@ parseDict =
 
 
 {- Main value parser -}
-
-
-parseUnit : Parser ElmValue
-parseUnit =
-    P.succeed (Plain ElmUnit)
-        |. P.keyword "()"
 
 
 parseValueWithoutCustomType : Parser ElmValue
