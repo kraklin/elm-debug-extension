@@ -1,9 +1,9 @@
 module DebugParserTests exposing (fuzzSuite, suite)
 
 import DebugParser
-import DebugParser.ElmValue exposing (ElmValue(..), SequenceType(..))
+import DebugParser.ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..))
 import Expect
-import Fuzz exposing (Fuzzer, int, list)
+import Fuzz exposing (Fuzzer)
 import Test exposing (..)
 
 
@@ -43,7 +43,7 @@ fuzzBool =
     Fuzz.bool
         |> Fuzz.map
             (\bool ->
-                ( Debug.toString bool, ElmBool bool )
+                ( Debug.toString bool, Plain <| ElmBool bool )
             )
 
 
@@ -52,7 +52,7 @@ fuzzInt =
     Fuzz.int
         |> Fuzz.map
             (\int ->
-                ( Debug.toString int, ElmNumber (toFloat int) )
+                ( Debug.toString int, Plain <| ElmNumber (toFloat int) )
             )
 
 
@@ -61,15 +61,15 @@ fuzzFloat =
     Fuzz.niceFloat
         |> Fuzz.map
             (\float ->
-                ( Debug.toString float, ElmNumber float )
+                ( Debug.toString float, Plain <| ElmNumber float )
             )
 
 
 fuzzInfinity : Fuzzer ( String, ElmValue )
 fuzzInfinity =
     Fuzz.oneOf
-        [ Fuzz.constant ( "Infinity", ElmNumber (1 / 0) )
-        , Fuzz.constant ( "-Infinity", ElmNumber -(1 / 0) )
+        [ Fuzz.constant ( "Infinity", Plain <| ElmNumber (1 / 0) )
+        , Fuzz.constant ( "-Infinity", Plain <| ElmNumber -(1 / 0) )
         ]
 
 
@@ -84,29 +84,29 @@ fuzzNumber =
 
 fuzzUnit : Fuzzer ( String, ElmValue )
 fuzzUnit =
-    Fuzz.constant ( "()", ElmUnit )
+    Fuzz.constant ( "()", Plain ElmUnit )
 
 
 fuzzInternals : Fuzzer ( String, ElmValue )
 fuzzInternals =
-    Fuzz.constant ( "<internals>", ElmInternals )
+    Fuzz.constant ( "<internals>", Plain ElmInternals )
 
 
 fuzzFunction : Fuzzer ( String, ElmValue )
 fuzzFunction =
-    Fuzz.constant ( "<function>", ElmFunction )
+    Fuzz.constant ( "<function>", Plain ElmFunction )
 
 
 fuzzString : Fuzzer ( String, ElmValue )
 fuzzString =
     Fuzz.string
-        |> Fuzz.map (\str -> ( Debug.toString str, ElmString str ))
+        |> Fuzz.map (\str -> ( Debug.toString str, Plain <| ElmString str ))
 
 
 fuzzChar : Fuzzer ( String, ElmValue )
 fuzzChar =
     Fuzz.char
-        |> Fuzz.map (\char -> ( Debug.toString char, ElmChar char ))
+        |> Fuzz.map (\char -> ( Debug.toString char, Plain <| ElmChar char ))
 
 
 fuzzCustomType : Fuzzer ( String, ElmValue )
@@ -115,7 +115,7 @@ fuzzCustomType =
         buildCustomType ( name, _ ) list =
             List.unzip list
                 |> Tuple.mapFirst (\strList -> name ++ " " ++ String.join " " strList |> String.trim)
-                |> Tuple.mapSecond (ElmType False name)
+                |> Tuple.mapSecond (Expandable False << ElmType name)
     in
     recursiveFuzzer
         { maxDepth = 3
@@ -164,7 +164,7 @@ fuzzTuple : Fuzzer ( String, ElmValue )
 fuzzTuple =
     let
         buildTuple ( fstStr, fstVal ) ( sndStr, sndVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", ElmSequence False SeqTuple [ fstVal, sndVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ ")", Expandable False <| ElmSequence SeqTuple [ fstVal, sndVal ] )
 
         tupleValue next =
             Fuzz.oneOf
@@ -186,7 +186,7 @@ fuzzTriplet : Fuzzer ( String, ElmValue )
 fuzzTriplet =
     let
         buildTriplet ( fstStr, fstVal ) ( sndStr, sndVal ) ( rdStr, rdVal ) =
-            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", ElmSequence False SeqTuple [ fstVal, sndVal, rdVal ] )
+            ( "(" ++ fstStr ++ "," ++ sndStr ++ "," ++ rdStr ++ ")", Expandable False <| ElmSequence SeqTuple [ fstVal, sndVal, rdVal ] )
 
         tripletValue next =
             Fuzz.oneOf [ fuzzValue, next, fuzzTuple ]
@@ -232,7 +232,7 @@ fuzzTypeName =
 fuzzTypeWithoutValue : Fuzzer ( String, ElmValue )
 fuzzTypeWithoutValue =
     fuzzTypeName
-        |> Fuzz.map (\typeName -> ( typeName, ElmType False typeName [] ))
+        |> Fuzz.map (\typeName -> ( typeName, Expandable False <| ElmType typeName [] ))
 
 
 fuzzListValue : Fuzzer ( String, ElmValue ) -> Fuzzer ( String, ElmValue )
@@ -242,7 +242,7 @@ fuzzListValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "[" ++ String.join "," strList ++ "]", ElmSequence False SeqList valList )
+                        ( "[" ++ String.join "," strList ++ "]", Expandable False <| ElmSequence SeqList valList )
                    )
             )
 
@@ -254,7 +254,7 @@ fuzzArrayValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Array.fromList [" ++ String.join "," strList ++ "]", ElmSequence False SeqArray valList )
+                        ( "Array.fromList [" ++ String.join "," strList ++ "]", Expandable False <| ElmSequence SeqArray valList )
                    )
             )
 
@@ -266,7 +266,7 @@ fuzzSetValue valueFuzzer =
             (List.foldl (\( str, v ) ( resultStr, values ) -> ( str :: resultStr, v :: values ))
                 ( [], [] )
                 >> (\( strList, valList ) ->
-                        ( "Set.fromList [" ++ String.join "," strList ++ "]", ElmSequence False SeqSet valList )
+                        ( "Set.fromList [" ++ String.join "," strList ++ "]", Expandable False <| ElmSequence SeqSet valList )
                    )
             )
 
@@ -329,7 +329,7 @@ fuzzRecord =
                     )
                 |> List.unzip
                 |> Tuple.mapFirst (\strList -> "{ " ++ String.join ", " strList ++ " }")
-                |> Tuple.mapSecond (ElmRecord False)
+                |> Tuple.mapSecond (Expandable False << ElmRecord)
         )
         fuzzRecordEntry
         fuzzRecordList
@@ -357,7 +357,7 @@ fuzzDict =
             (\list ->
                 List.unzip list
                     |> Tuple.mapFirst (\strList -> "Dict.fromList [" ++ String.join ", " strList ++ "]")
-                    |> Tuple.mapSecond (ElmDict False)
+                    |> Tuple.mapSecond (Expandable False << ElmDict)
             )
 
 
@@ -367,36 +367,46 @@ suite =
         [ test "Simple bolean value"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: True")
-                    (Ok { tag = "Debug", value = ElmBool True })
+                    (Ok { tag = "Debug", value = Plain <| ElmBool True })
             )
         , test "Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,False)")
-                    (Ok { tag = "Debug", value = ElmSequence False SeqTuple [ ElmBool True, ElmBool False ] })
+                    (Ok { tag = "Debug", value = Expandable False <| ElmSequence SeqTuple [ Plain <| ElmBool True, Plain <| ElmBool False ] })
             )
         , test "Nested Tuple"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: (True,(2,()))")
-                    (Ok { tag = "Debug", value = ElmSequence False SeqTuple [ ElmBool True, ElmSequence False SeqTuple [ ElmNumber 2, ElmUnit ] ] })
+                    (Ok
+                        { tag = "Debug"
+                        , value =
+                            Expandable False <|
+                                ElmSequence SeqTuple
+                                    [ Plain <| ElmBool True
+                                    , Expandable False <|
+                                        ElmSequence SeqTuple [ Plain <| ElmNumber 2, Plain ElmUnit ]
+                                    ]
+                        }
+                    )
             )
         , test "Empty list"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: []")
-                    (Ok { tag = "Debug", value = ElmSequence False SeqList [] })
+                    (Ok { tag = "Debug", value = Expandable False <| ElmSequence SeqList [] })
             )
         , test "Parse bytes"
             (\_ ->
                 "msg: <123 bytes>"
                     |> DebugParser.parse
                     |> Result.map .value
-                    |> Expect.equal (Ok (ElmBytes 123))
+                    |> Expect.equal (Ok (Plain <| ElmBytes 123))
             )
         , test "Parse file"
             (\_ ->
                 "msg: <filename>"
                     |> DebugParser.parse
                     |> Result.map .value
-                    |> Expect.equal (Ok (ElmFile "filename"))
+                    |> Expect.equal (Ok (Plain <| ElmFile "filename"))
             )
         , test "Parse NaN"
             (\_ ->
@@ -404,7 +414,7 @@ suite =
                     |> Result.map
                         (\parsed ->
                             case parsed.value of
-                                ElmNumber a ->
+                                Plain (ElmNumber a) ->
                                     isNaN a
 
                                 _ ->
@@ -419,33 +429,44 @@ suite =
         , test "Parse string with emoji"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: \"Debug message👨\u{200D}💻\"")
-                    (Ok { tag = "Debug", value = ElmString "Debug message👨\u{200D}💻" })
+                    (Ok { tag = "Debug", value = Plain <| ElmString "Debug message👨\u{200D}💻" })
             )
         , test "Parse nonstandard chars "
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: ['\u{000D}', '👨', '\\'', '\n' ]")
-                    (Ok { tag = "Debug", value = ElmSequence False SeqList [ ElmChar '\u{000D}', ElmChar '👨', ElmChar '\'', ElmChar '\n' ] })
+                    (Ok
+                        { tag = "Debug"
+                        , value =
+                            Expandable False <|
+                                ElmSequence SeqList
+                                    [ Plain <| ElmChar '\u{000D}'
+                                    , Plain <| ElmChar '👨'
+                                    , Plain <| ElmChar '\''
+                                    , Plain <| ElmChar '\n'
+                                    ]
+                        }
+                    )
             )
         , describe "Multiple types"
             [ test "Just boolean"
                 (\_ ->
                     Expect.equal (DebugParser.parse "Debug: Just True")
-                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True ] })
+                        (Ok { tag = "Debug", value = Expandable False <| ElmType "Just" [ Plain <| ElmBool True ] })
                 )
             , test "Multiple values "
                 (\_ ->
                     Expect.equal (DebugParser.parse "Debug: Just True Nothing")
-                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmBool True, ElmType False "Nothing" [] ] })
+                        (Ok { tag = "Debug", value = Expandable False <| ElmType "Just" [ Plain <| ElmBool True, Expandable False <| ElmType "Nothing" [] ] })
                 )
             , test "Multiple values with parentheses"
                 (\_ ->
                     Expect.equal (DebugParser.parse "Debug: Just (Just True)")
-                        (Ok { tag = "Debug", value = ElmType False "Just" [ ElmType False "Just" [ ElmBool True ] ] })
+                        (Ok { tag = "Debug", value = Expandable False <| ElmType "Just" [ Expandable False <| ElmType "Just" [ Plain <| ElmBool True ] ] })
                 )
             , test "Multiple values without parentheses"
                 (\_ ->
                     Expect.equal (DebugParser.parse "Debug: A A ()")
-                        (Ok { tag = "Debug", value = ElmType False "A" [ ElmType False "A" [], ElmUnit ] })
+                        (Ok { tag = "Debug", value = Expandable False <| ElmType "A" [ Expandable False <| ElmType "A" [], Plain <| ElmUnit ] })
                 )
             , test "Multiple values with different types"
                 (\_ ->
@@ -453,18 +474,19 @@ suite =
                         (Ok
                             { tag = "Debug"
                             , value =
-                                ElmType False
-                                    "Custom"
-                                    [ ElmType False
-                                        "Just"
-                                        [ ElmBool True
-                                        , ElmNumber 12
-                                        , ElmString "string"
-                                        , ElmType False "Nothing" []
+                                Expandable False <|
+                                    ElmType "Custom"
+                                        [ Expandable False <|
+                                            ElmType
+                                                "Just"
+                                                [ Plain <| ElmBool True
+                                                , Plain <| ElmNumber 12
+                                                , Plain <| ElmString "string"
+                                                , Expandable False <| ElmType "Nothing" []
+                                                ]
+                                        , Plain <| ElmNumber (1 / 0)
+                                        , Plain <| ElmNumber -(1 / 0)
                                         ]
-                                    , ElmNumber (1 / 0)
-                                    , ElmNumber -(1 / 0)
-                                    ]
                             }
                         )
                 )
@@ -472,7 +494,7 @@ suite =
         , test "Custom type at the end of record"
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: { a = A }")
-                    (Ok { tag = "Debug", value = ElmRecord False [ ( "a", ElmType False "A" [] ) ] })
+                    (Ok { tag = "Debug", value = Expandable False <| ElmRecord [ ( "a", Expandable False <| ElmType "A" [] ) ] })
             )
         , test "CustomType within custom type"
             (\_ ->
@@ -482,13 +504,15 @@ suite =
                         (Ok
                             { tag = "msg"
                             , value =
-                                ElmType False
-                                    "CrosstabBuilderStoreMsg"
-                                    [ ElmType False
-                                        "XBProjectsFetched"
-                                        [ ElmRecord False [ ( "copiedFrom", ElmType False "Nothing" [] ) ]
+                                Expandable False <|
+                                    ElmType
+                                        "CrosstabBuilderStoreMsg"
+                                        [ Expandable False <|
+                                            ElmType
+                                                "XBProjectsFetched"
+                                                [ Expandable False <| ElmRecord [ ( "copiedFrom", Expandable False <| ElmType "Nothing" [] ) ]
+                                                ]
                                         ]
-                                    ]
                             }
                         )
             )
@@ -496,7 +520,14 @@ suite =
             (\_ ->
                 "msg: Leaf \"A\" (Dict.fromList [])"
                     |> DebugParser.parse
-                    |> Expect.equal (Ok { tag = "msg", value = ElmType False "Leaf" [ ElmString "A", ElmDict False [] ] })
+                    |> Expect.equal
+                        (Ok
+                            { tag = "msg"
+                            , value =
+                                Expandable False <|
+                                    ElmType "Leaf" [ Plain <| ElmString "A", Expandable False <| ElmDict [] ]
+                            }
+                        )
             )
         , test "problematic group"
             (\_ ->
@@ -506,10 +537,21 @@ suite =
                         (Ok
                             { tag = "msg"
                             , value =
-                                ElmType False
-                                    "Group"
-                                    [ ElmDict False [ ( ElmString "city", ElmType False "Value" [ ElmType False "String" [ ElmString "" ] ] ) ]
-                                    ]
+                                Expandable False <|
+                                    ElmType "Group"
+                                        [ Expandable False <|
+                                            ElmDict
+                                                [ ( Plain <| ElmString "city"
+                                                  , Expandable False <|
+                                                        ElmType "Value"
+                                                            [ Expandable False <|
+                                                                ElmType "String"
+                                                                    [ Plain <| ElmString ""
+                                                                    ]
+                                                            ]
+                                                  )
+                                                ]
+                                        ]
                             }
                         )
             )
@@ -522,7 +564,13 @@ suite =
         , test "Parse char with two backslashes "
             (\_ ->
                 Expect.equal (DebugParser.parse "Debug: ['\\t' ]")
-                    (Ok { tag = "Debug", value = ElmSequence False SeqList [ ElmChar '\t' ] })
+                    (Ok
+                        { tag = "Debug"
+                        , value =
+                            Expandable False <|
+                                ElmSequence SeqList [ Plain <| ElmChar '\t' ]
+                        }
+                    )
             )
         ]
 
@@ -540,7 +588,7 @@ fuzzSuite =
             "Tag can be any string except string contains `: `"
             (\tag ->
                 Expect.equal (DebugParser.parse (tag ++ ": True"))
-                    (Ok { tag = tag, value = ElmBool True })
+                    (Ok { tag = tag, value = Plain <| ElmBool True })
             )
         , fuzz fuzzValue
             "Base value is parsed without problems"
