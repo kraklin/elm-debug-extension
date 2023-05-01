@@ -4,7 +4,7 @@ module DebugParser exposing
     , parseWithOptionalTag
     )
 
-import DebugParser.ElmValue exposing (ElmValue(..), SequenceType(..))
+import DebugParser.ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..))
 import Parser as P exposing ((|.), (|=), DeadEnd, Parser, Step(..))
 
 
@@ -126,6 +126,7 @@ parseNumber =
             , number
             ]
         ]
+        |> P.map Plain
 
 
 parseKeywords : Parser ElmValue
@@ -136,6 +137,7 @@ parseKeywords =
         , P.succeed ElmFunction
             |. P.keyword "<function>"
         ]
+        |> P.map Plain
 
 
 parseList : Parser ElmValue
@@ -150,7 +152,7 @@ parseList =
         }
         |> P.map
             (\listVal ->
-                ElmSequence False SeqList listVal
+                Expandable False <| ElmSequence SeqList listVal
             )
 
 
@@ -166,7 +168,7 @@ parseArray =
         }
         |> P.map
             (\listVal ->
-                ElmSequence False SeqArray listVal
+                Expandable False <| ElmSequence SeqArray listVal
             )
 
 
@@ -182,7 +184,7 @@ parseSet =
         }
         |> P.map
             (\listVal ->
-                ElmSequence False SeqSet listVal
+                Expandable False <| ElmSequence SeqSet listVal
             )
 
 
@@ -196,7 +198,7 @@ parseString =
         |. P.token "\""
         |= P.loop [] (stringHelp "\"" isUninteresting)
         |> P.andThen
-            (Maybe.map (\str -> P.succeed (ElmString str))
+            (Maybe.map (\str -> P.succeed (Plain <| ElmString str))
                 >> Maybe.withDefault (P.problem "One string has no closing double quotes")
             )
 
@@ -240,7 +242,7 @@ parseFile =
         |. P.token "<"
         |= P.loop [] (stringHelp ">" (\c -> c /= '>'))
         |> P.andThen
-            (Maybe.map (\str -> P.succeed (ElmFile str))
+            (Maybe.map (\str -> P.succeed (Plain <| ElmFile str))
                 >> Maybe.withDefault (P.problem "File has no closing bracket")
             )
 
@@ -300,28 +302,34 @@ parseChar =
     P.oneOf
         [ P.succeed identity
             |. P.token "'\\''"
-            |> P.map (\_ -> ElmChar '\'')
+            |> P.map (\_ -> Plain <| ElmChar '\'')
         , P.succeed identity
             |. P.token "'\\t'"
-            |> P.map (\_ -> ElmChar '\t')
+            |> P.map (\_ -> Plain <| ElmChar '\t')
         , P.succeed identity
             |. P.token "'\\n'"
-            |> P.map (\_ -> ElmChar '\n')
+            |> P.map (\_ -> Plain <| ElmChar '\n')
         , P.succeed identity
             |. P.token "'\\v'"
-            |> P.map (\_ -> ElmChar '\u{000B}')
+            |> P.map (\_ -> Plain <| ElmChar '\u{000B}')
         , P.succeed identity
             |. P.token "'\\r'"
-            |> P.map (\_ -> ElmChar '\u{000D}')
+            |> P.map (\_ -> Plain <| ElmChar '\u{000D}')
         , P.succeed identity
             |. P.token "'\\0'"
-            |> P.map (\_ -> ElmChar '\u{0000}')
+            |> P.map (\_ -> Plain <| ElmChar '\u{0000}')
         , P.succeed identity
             |. P.token "'"
             |= P.getChompedString (P.chompUntil "'")
             |. P.token "'"
             |> P.map
-                (String.toList >> List.reverse >> List.head >> Maybe.withDefault 'x' >> ElmChar)
+                (String.toList
+                    >> List.reverse
+                    >> List.head
+                    >> Maybe.withDefault 'x'
+                    >> ElmChar
+                    >> Plain
+                )
         ]
 
 
@@ -336,19 +344,19 @@ parseTypeWithoutValue =
             (\name ->
                 case name of
                     "True" ->
-                        ElmBool True
+                        Plain <| ElmBool True
 
                     "False" ->
-                        ElmBool False
+                        Plain <| ElmBool False
 
                     "NaN" ->
-                        ElmNumber (0 / 0)
+                        Plain <| ElmNumber (0 / 0)
 
                     "Infinity" ->
-                        ElmNumber (1 / 0)
+                        Plain <| ElmNumber (1 / 0)
 
                     _ ->
-                        ElmType False name []
+                        Expandable False <| ElmType name []
             )
 
 
@@ -371,7 +379,7 @@ parseRecord =
         }
         |> P.map
             (\listVal ->
-                ElmRecord False listVal
+                Expandable False <| ElmRecord listVal
             )
 
 
@@ -379,7 +387,7 @@ parseBytes : Parser ElmValue
 parseBytes =
     -- TODO: the backtrackable can be removed with the combination of file parser
     P.backtrackable <|
-        P.succeed ElmBytes
+        P.succeed (Plain << ElmBytes)
             |. P.token "<"
             |= P.int
             |. P.token " bytes>"
@@ -395,19 +403,20 @@ parseCustomTypeWithoutValue =
         (\name ->
             case name of
                 "True" ->
-                    ElmBool True
+                    Plain <| ElmBool True
 
                 "False" ->
-                    ElmBool False
+                    Plain <| ElmBool False
 
                 "NaN" ->
-                    ElmNumber (0 / 0)
+                    Plain <| ElmNumber (0 / 0)
 
                 "Infinity" ->
-                    ElmNumber (1 / 0)
+                    Plain <| ElmNumber (1 / 0)
 
                 _ ->
-                    ElmType False name []
+                    --NOTE: This is actually not expandable at all. Maybe a tip for a refactoring it later
+                    Expandable False <| ElmType name []
         )
         |= parseTypeName
 
@@ -419,21 +428,21 @@ parseCustomType =
             (\name ->
                 case name of
                     "True" ->
-                        P.succeed (ElmBool True)
+                        P.succeed (Plain <| ElmBool True)
 
                     "False" ->
-                        P.succeed (ElmBool False)
+                        P.succeed (Plain <| ElmBool False)
 
                     "NaN" ->
-                        P.succeed (ElmNumber (0 / 0))
+                        P.succeed (Plain <| ElmNumber (0 / 0))
 
                     "Infinity" ->
-                        P.succeed (ElmNumber (1 / 0))
+                        P.succeed (Plain <| ElmNumber (1 / 0))
 
                     _ ->
                         P.succeed
                             (\list ->
-                                ElmType False name (List.reverse list)
+                                Expandable False <| ElmType name (List.reverse list)
                             )
                             |= P.loop [] typeHelp
             )
@@ -478,17 +487,17 @@ parseValueWithParenthesis =
                                                     |= P.lazy (\_ -> parseValue)
                                                     |> P.map
                                                         (\rdValue ->
-                                                            ElmSequence False SeqTuple [ fstValue, sndValue, rdValue ]
+                                                            Expandable False <| ElmSequence SeqTuple [ fstValue, sndValue, rdValue ]
                                                         )
                                                 , -- ("x", "y")
                                                   P.succeed
-                                                    (ElmSequence False SeqTuple [ fstValue, sndValue ])
+                                                    (Expandable False <| ElmSequence SeqTuple [ fstValue, sndValue ])
                                                 ]
                                     )
                             , P.succeed fstValue
                             ]
                     )
-            , P.succeed ElmUnit
+            , P.succeed <| Plain ElmUnit
             ]
         |. P.token ")"
 
@@ -522,7 +531,7 @@ parseDict =
         }
         |> P.map
             (\listVal ->
-                ElmDict False listVal
+                Expandable False <| ElmDict listVal
             )
 
 
@@ -532,7 +541,7 @@ parseDict =
 
 parseUnit : Parser ElmValue
 parseUnit =
-    P.succeed ElmUnit
+    P.succeed (Plain ElmUnit)
         |. P.keyword "()"
 
 
