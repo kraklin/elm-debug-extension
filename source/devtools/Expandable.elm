@@ -8,7 +8,7 @@ module Expandable exposing
     )
 
 import Css
-import DebugParser.ElmValue as ElmValue exposing (ElmValue(..), SequenceType(..))
+import DebugParser.ElmValue as ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..))
 import Html.Events as Events
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
@@ -42,70 +42,72 @@ valueDecoder =
             (\valueType ->
                 case valueType of
                     "String" ->
-                        Decode.succeed ElmString
+                        Decode.succeed (Plain << ElmString)
                             |> andDecodeValueField Decode.string
 
                     "Number" ->
-                        Decode.succeed ElmNumber
+                        Decode.succeed (Plain << ElmNumber)
                             |> andDecodeValueField Decode.float
 
                     "Boolean" ->
-                        Decode.succeed ElmBool
+                        Decode.succeed (Plain << ElmBool)
                             |> andDecodeValueField Decode.bool
 
                     "Tuple" ->
-                        Decode.succeed (ElmSequence False SeqTuple)
+                        Decode.succeed (Expandable False << ElmSequence SeqTuple)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Set" ->
-                        Decode.succeed (ElmSequence False SeqSet)
+                        Decode.succeed (Expandable False << ElmSequence SeqSet)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "List" ->
-                        Decode.succeed (ElmSequence False SeqList)
+                        Decode.succeed (Expandable False << ElmSequence SeqList)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Array" ->
-                        Decode.succeed (ElmSequence False SeqArray)
+                        Decode.succeed (Expandable False << ElmSequence SeqArray)
                             |> andDecodeValueField (Decode.list valueDecoder)
 
                     "Record" ->
-                        Decode.succeed (ElmRecord False)
+                        Decode.succeed (Expandable False << ElmRecord)
                             |> andDecodeValueField (Decode.keyValuePairs valueDecoder)
 
                     "Internals" ->
-                        Decode.succeed ElmInternals
+                        Decode.succeed (Plain ElmInternals)
 
                     "Function" ->
-                        Decode.succeed ElmFunction
+                        Decode.succeed (Plain ElmFunction)
 
                     "Unit" ->
-                        Decode.succeed ElmUnit
+                        Decode.succeed (Plain ElmUnit)
 
                     "Type" ->
-                        Decode.succeed (ElmType False)
+                        Decode.succeed ElmType
                             |> Decode.andMap (Decode.field "name" Decode.string)
                             |> Decode.andMap (Decode.succeed [])
+                            |> Decode.map (Expandable False)
 
                     "Custom" ->
-                        Decode.succeed (ElmType False)
+                        Decode.succeed ElmType
                             |> Decode.andMap (Decode.field "name" Decode.string)
                             |> Decode.andMap (Decode.field "value" (Decode.list valueDecoder))
+                            |> Decode.map (Expandable False)
 
                     "Dict" ->
-                        Decode.succeed (ElmDict False)
+                        Decode.succeed (Expandable False << ElmDict)
                             |> andDecodeValueField (Decode.list (Decode.map2 Tuple.pair (Decode.field "key" valueDecoder) (Decode.field "value" valueDecoder)))
 
                     "File" ->
-                        Decode.succeed ElmFile
+                        Decode.succeed (Plain << ElmFile)
                             |> andDecodeValueField Decode.string
 
                     "Bytes" ->
-                        Decode.succeed ElmBytes
+                        Decode.succeed (Plain << ElmBytes)
                             |> andDecodeValueField Decode.int
 
                     _ ->
-                        Decode.succeed <| ElmString "<unable to decode value>"
+                        Decode.succeed <| (Plain <| ElmString "<unable to decode value>")
             )
 
 
@@ -114,7 +116,7 @@ elmValueDecoder =
     Decode.oneOf
         [ valueDecoder
         , Decode.succeed <|
-            ElmString "<unknown value>"
+            (Plain <| ElmString "<unknown value>")
         ]
 
 
@@ -139,16 +141,7 @@ decodeParsedValue value =
 isValueExpanded : ElmValue -> Bool
 isValueExpanded value =
     case value of
-        ElmSequence isOpened _ _ ->
-            isOpened
-
-        ElmRecord isOpened _ ->
-            isOpened
-
-        ElmDict isOpened _ ->
-            isOpened
-
-        ElmType isOpened _ _ ->
+        Expandable isOpened _ ->
             isOpened
 
         _ ->
@@ -160,22 +153,25 @@ mapValue key fn value =
     let
         mapNestedValue mapIndex mappedFn =
             case value of
-                ElmSequence a b values ->
-                    ElmSequence a b <| List.updateIfIndex ((==) mapIndex) mappedFn values
+                Expandable isOpened expandableValue ->
+                    Expandable isOpened <|
+                        case expandableValue of
+                            ElmSequence b values ->
+                                ElmSequence b <| List.updateIfIndex ((==) mapIndex) mappedFn values
 
-                ElmRecord a values ->
-                    ElmRecord a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+                            ElmRecord values ->
+                                ElmRecord <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
 
-                ElmDict a values ->
-                    ElmDict a <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+                            ElmDict values ->
+                                ElmDict <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
 
-                ElmType a b typeValues ->
-                    case typeValues of
-                        [] ->
-                            value
+                            ElmType b typeValues ->
+                                case typeValues of
+                                    [] ->
+                                        ElmType b typeValues
 
-                        values ->
-                            ElmType a b <| List.updateIfIndex ((==) mapIndex) mappedFn values
+                                    values ->
+                                        ElmType b <| List.updateIfIndex ((==) mapIndex) mappedFn values
 
                 _ ->
                     value
@@ -282,7 +278,7 @@ viewValueHeaderInner level colorTheme value =
             viewValueHeaderInner (level + 1) colorTheme
     in
     case value of
-        ElmSequence _ seqType children ->
+        Expandable _ (ElmSequence seqType children) ->
             let
                 typeToString =
                     case seqType of
@@ -323,7 +319,7 @@ viewValueHeaderInner level colorTheme value =
                         , Html.text <| "(" ++ String.fromInt (List.length children) ++ ")"
                         ]
 
-        ElmRecord _ recordValues ->
+        Expandable _ (ElmRecord recordValues) ->
             let
                 keySpan name =
                     Html.span []
@@ -378,7 +374,7 @@ viewValueHeaderInner level colorTheme value =
                             ]
                     )
 
-        ElmDict _ dictValues ->
+        Expandable _ (ElmDict dictValues) ->
             Html.span []
                 [ Html.span [ Attrs.css [ Css.color colorTheme.sequenceNameColor ] ]
                     [ Html.text "Dict"
@@ -386,11 +382,11 @@ viewValueHeaderInner level colorTheme value =
                 , Html.text <| "(" ++ (String.fromInt <| List.length dictValues) ++ ")"
                 ]
 
-        ElmType _ name values ->
+        Expandable _ (ElmType name values) ->
             let
                 isTypeWithValues value_ =
                     case value_ of
-                        ElmType _ _ (_ :: _) ->
+                        Expandable _ (ElmType _ (_ :: _)) ->
                             True
 
                         _ ->
@@ -442,16 +438,16 @@ viewValueHeaderInner level colorTheme value =
                                )
                         )
 
-        ElmString str ->
+        Plain (ElmString str) ->
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "\"" ++ str ++ "\"" ]
 
-        ElmChar str ->
+        Plain (ElmChar str) ->
             Html.span [ Attrs.css [ Css.color colorTheme.stringColor ] ] [ Html.text <| "'" ++ String.fromChar str ++ "'" ]
 
-        ElmNumber float ->
+        Plain (ElmNumber float) ->
             Html.span [ Attrs.css [ Css.color colorTheme.numbersColor ] ] [ Html.text <| String.fromFloat float ]
 
-        ElmBool bool ->
+        Plain (ElmBool bool) ->
             Html.span [ Attrs.css [ Css.color colorTheme.booleanColor ] ]
                 [ Html.text <|
                     if bool then
@@ -461,21 +457,21 @@ viewValueHeaderInner level colorTheme value =
                         "False"
                 ]
 
-        ElmInternals ->
+        Plain ElmInternals ->
             Html.span [ Attrs.css [ Css.color colorTheme.internalsColor ] ]
                 [ Html.text "<internals>" ]
 
-        ElmFunction ->
+        Plain ElmFunction ->
             Html.span [ Attrs.css [ Css.color colorTheme.internalsColor ] ]
                 [ Html.text "<function>" ]
 
-        ElmUnit ->
+        Plain ElmUnit ->
             Html.text "()"
 
-        ElmFile name ->
+        Plain (ElmFile name) ->
             Html.text name
 
-        ElmBytes count ->
+        Plain (ElmBytes count) ->
             Html.text <| String.fromInt count ++ "B"
 
 
@@ -570,12 +566,12 @@ viewValue colorTheme toggleMsg parentKey value =
                 child
     in
     case value of
-        ElmSequence _ _ children ->
+        Expandable _ (ElmSequence _ children) ->
             children
                 |> List.indexedMap toggableDivWrapper
                 |> childrenWrapper
 
-        ElmRecord _ recordValues ->
+        Expandable _ (ElmRecord recordValues) ->
             recordValues
                 |> List.indexedMap
                     (\idx ( key, child ) ->
@@ -595,7 +591,7 @@ viewValue colorTheme toggleMsg parentKey value =
                     )
                 |> childrenWrapper
 
-        ElmDict _ dictValues ->
+        Expandable _ (ElmDict dictValues) ->
             dictValues
                 |> List.indexedMap
                     (\idx ( key, dictValue ) ->
@@ -609,7 +605,7 @@ viewValue colorTheme toggleMsg parentKey value =
                     )
                 |> childrenWrapper
 
-        ElmType _ name values ->
+        Expandable _ (ElmType name values) ->
             case values of
                 [] ->
                     Html.span [ Attrs.css [ Css.color colorTheme.customTypesColor ] ] [ Html.text name ]
