@@ -4,6 +4,7 @@ import Browser
 import Browser.Dom as Dom
 import Css
 import DebugMessages exposing (AddMessageData, DebugMessages)
+import DebugParser.ElmValue exposing (Path)
 import Expandable
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
@@ -70,7 +71,7 @@ type Msg
     | LogReceived ( String, String )
     | BulkLogReceived Value
     | Clear
-    | Toggle DebugMessages.Key Expandable.Key
+    | Toggle DebugMessages.Key Path
     | ParsingError String
     | GetZone Zone
     | FilterChanged String

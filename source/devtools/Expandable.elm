@@ -1,24 +1,24 @@
 module Expandable exposing
-    ( Key
-    , decodeParsedValue
+    ( decodeParsedValue
     , logDecoder
-    , mapValue
     , viewMessageHeader
     , viewValue
     )
 
 import Css
-import DebugParser.ElmValue as ElmValue exposing (ElmValue(..), ExpandableValue(..), PlainValue(..), SequenceType(..))
+import DebugParser.ElmValue as ElmValue
+    exposing
+        ( ElmValue(..)
+        , ExpandableValue(..)
+        , Path
+        , PlainValue(..)
+        , SequenceType(..)
+        )
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as Decode
-import List.Extra as List
-
-
-type alias Key =
-    List Int
 
 
 type alias DecodedLog =
@@ -147,45 +147,6 @@ isValueExpanded value =
             False
 
 
-mapValue : Key -> (ElmValue -> ElmValue) -> ElmValue -> ElmValue
-mapValue key fn value =
-    let
-        mapNestedValue mapIndex mappedFn =
-            case value of
-                Expandable isOpened expandableValue ->
-                    Expandable isOpened <|
-                        case expandableValue of
-                            ElmSequence b values ->
-                                ElmSequence b <| List.updateIfIndex ((==) mapIndex) mappedFn values
-
-                            ElmRecord values ->
-                                ElmRecord <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
-
-                            ElmDict values ->
-                                ElmDict <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
-
-                            ElmType b typeValues ->
-                                case typeValues of
-                                    [] ->
-                                        ElmType b typeValues
-
-                                    values ->
-                                        ElmType b <| List.updateIfIndex ((==) mapIndex) mappedFn values
-
-                _ ->
-                    value
-    in
-    case key of
-        [] ->
-            fn value
-
-        [ idx ] ->
-            mapNestedValue idx fn
-
-        idx :: rest ->
-            mapNestedValue idx (mapValue rest fn)
-
-
 
 -- VIEW --
 
@@ -206,7 +167,7 @@ type alias ColorTheme a =
     }
 
 
-viewMessageHeader : ColorTheme a -> (Key -> msg) -> Int -> String -> String -> ElmValue -> Html msg
+viewMessageHeader : ColorTheme a -> (Path -> msg) -> Int -> String -> String -> ElmValue -> Html msg
 viewMessageHeader colorTheme toggleMsg count tag time value =
     let
         viewCount =
@@ -491,7 +452,7 @@ triangle colorTheme isOpened =
         ]
 
 
-valueHeader : ColorTheme a -> (Key -> msg) -> Key -> Maybe (Html msg) -> ElmValue -> Html msg
+valueHeader : ColorTheme a -> (Path -> msg) -> Path -> Maybe (Html msg) -> ElmValue -> Html msg
 valueHeader colorTheme toggleMsg toggleKey maybeKey value =
     let
         viewValueContent =
@@ -509,9 +470,9 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
                 Nothing ->
                     headerValue
 
-                Just key ->
+                Just path ->
                     Html.span []
-                        [ key
+                        [ path
                         , Html.span [] [ Html.text ": " ]
                         , headerValue
                         ]
@@ -533,11 +494,14 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
         Html.div [ Attrs.css [ Css.marginLeft <| Css.px 12 ] ] [ headerWithKey ]
 
 
-viewValue : ColorTheme a -> (Key -> msg) -> Key -> ElmValue -> Html msg
+viewValue : ColorTheme a -> (Path -> msg) -> Path -> ElmValue -> Html msg
 viewValue colorTheme toggleMsg parentKey value =
     let
         toggleKey idx =
             parentKey ++ [ idx ]
+
+        header idx =
+            valueHeader colorTheme toggleMsg (toggleKey idx)
 
         childrenWrapper children =
             Html.div
@@ -550,9 +514,7 @@ viewValue colorTheme toggleMsg parentKey value =
                 children
 
         toggableDivWrapper idx child =
-            valueHeader colorTheme
-                toggleMsg
-                (toggleKey idx)
+            header idx
                 (Just <|
                     Html.span
                         [ Attrs.css
@@ -574,9 +536,7 @@ viewValue colorTheme toggleMsg parentKey value =
             recordValues
                 |> List.indexedMap
                     (\idx ( key, child ) ->
-                        valueHeader colorTheme
-                            toggleMsg
-                            (toggleKey idx)
+                        header idx
                             (Just <|
                                 Html.span
                                     [ Attrs.css
@@ -593,12 +553,10 @@ viewValue colorTheme toggleMsg parentKey value =
         Expandable _ (ElmDict dictValues) ->
             dictValues
                 |> List.indexedMap
-                    (\idx ( key, dictValue ) ->
-                        valueHeader colorTheme
-                            toggleMsg
-                            (toggleKey idx)
+                    (\idx ( path, dictValue ) ->
+                        header idx
                             (Just <|
-                                viewValueHeader colorTheme key
+                                viewValueHeader colorTheme path
                             )
                             dictValue
                     )
@@ -611,14 +569,7 @@ viewValue colorTheme toggleMsg parentKey value =
 
                 children ->
                     children
-                        |> List.indexedMap
-                            (\idx child ->
-                                valueHeader colorTheme
-                                    toggleMsg
-                                    (toggleKey idx)
-                                    Nothing
-                                    child
-                            )
+                        |> List.indexedMap (\idx child -> header idx Nothing child)
                         |> childrenWrapper
 
         _ ->

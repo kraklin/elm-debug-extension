@@ -18,7 +18,7 @@ module DebugMessages exposing
     )
 
 import DebugParser exposing (ParsedLog)
-import DebugParser.ElmValue as ElmValue exposing (ElmValue)
+import DebugParser.ElmValue as ElmValue exposing (ElmValue, Path)
 import Dict exposing (Dict)
 import Expandable
 import List.Extra as List
@@ -270,12 +270,12 @@ mergeHoldOnQueue (DebugMessages data) =
     DebugMessages { data | queue = data.holdOnQueue ++ data.queue, holdOnQueue = [] }
 
 
-toggleValue : Key -> Expandable.Key -> DebugMessages -> DebugMessages
+toggleValue : Key -> Path -> DebugMessages -> DebugMessages
 toggleValue key path (DebugMessages data) =
     let
         toggleValue_ storeMessage =
             { storeMessage
-                | value = Expandable.mapValue path ElmValue.toggle storeMessage.value
+                | value = ElmValue.toggleValueByPath path storeMessage.value
             }
     in
     DebugMessages

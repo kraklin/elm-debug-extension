@@ -1,11 +1,16 @@
 module DebugParser.ElmValue exposing
     ( ElmValue(..)
     , ExpandableValue(..)
+    , Path
     , PlainValue(..)
     , SequenceType(..)
     , hasNestedValues
+    , mapValuesWithPath
     , toggle
+    , toggleValueByPath
     )
+
+import List.Extra as List
 
 
 type ElmValue
@@ -73,3 +78,55 @@ toggle value =
 
         _ ->
             value
+
+
+type alias Path =
+    List Int
+
+
+mapValuesWithPath : (Path -> ElmValue -> a) -> Path -> List ElmValue -> List a
+mapValuesWithPath mapFn path values =
+    let
+        newPath idx =
+            path ++ [ idx ]
+    in
+    List.indexedMap (\idx value -> mapFn (newPath idx) value) values
+
+
+toggleValueByPath : Path -> ElmValue -> ElmValue
+toggleValueByPath path value =
+    let
+        mapNestedValue mapIndex mappedFn =
+            case value of
+                Expandable isOpened expandableValue ->
+                    Expandable isOpened <|
+                        case expandableValue of
+                            ElmSequence b values ->
+                                ElmSequence b <| List.updateIfIndex ((==) mapIndex) mappedFn values
+
+                            ElmRecord values ->
+                                ElmRecord <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+
+                            ElmDict values ->
+                                ElmDict <| List.updateIfIndex ((==) mapIndex) (Tuple.mapSecond mappedFn) values
+
+                            ElmType b typeValues ->
+                                case typeValues of
+                                    [] ->
+                                        ElmType b typeValues
+
+                                    values ->
+                                        ElmType b <| List.updateIfIndex ((==) mapIndex) mappedFn values
+
+                _ ->
+                    value
+    in
+    case path of
+        [] ->
+            toggle value
+
+        [ idx ] ->
+            mapNestedValue idx toggle
+
+        idx :: rest ->
+            mapNestedValue idx (toggleValueByPath rest)
