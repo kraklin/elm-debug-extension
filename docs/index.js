@@ -784,11 +784,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.bf.a8 === region.a3.a8)
+	if (region.cE.bt === region.c8.bt)
 	{
-		return 'on line ' + region.bf.a8;
+		return 'on line ' + region.cE.bt;
 	}
-	return 'on lines ' + region.bf.a8 + ' through ' + region.a3.a8;
+	return 'on lines ' + region.cE.bt + ' through ' + region.c8.bt;
 }
 
 
@@ -1857,9 +1857,9 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.e0,
-		impl.gh,
-		impl.fX,
+		impl.fA,
+		impl.gY,
+		impl.gB,
 		function() { return function() {} }
 	);
 });
@@ -2618,16 +2618,33 @@ var _VirtualDom_attributeNS = F3(function(namespace, key, value)
 
 
 // XSS ATTACK VECTOR CHECKS
+//
+// For some reason, tabs can appear in href protocols and it still works.
+// So '\tjava\tSCRIPT:alert("!!!")' and 'javascript:alert("!!!")' are the same
+// in practice. That is why _VirtualDom_RE_js and _VirtualDom_RE_js_html look
+// so freaky.
+//
+// Pulling the regular expressions out to the top level gives a slight speed
+// boost in small benchmarks (4-10%) but hoisting values to reduce allocation
+// can be unpredictable in large programs where JIT may have a harder time with
+// functions are not fully self-contained. The benefit is more that the js and
+// js_html ones are so weird that I prefer to see them near each other.
+
+
+var _VirtualDom_RE_script = /^script$/i;
+var _VirtualDom_RE_on_formAction = /^(on|formAction$)/i;
+var _VirtualDom_RE_js = /^\s*j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:/i;
+var _VirtualDom_RE_js_html = /^\s*(j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l\s*(,|;))/i;
 
 
 function _VirtualDom_noScript(tag)
 {
-	return tag == 'script' ? 'p' : tag;
+	return _VirtualDom_RE_script.test(tag) ? 'p' : tag;
 }
 
 function _VirtualDom_noOnOrFormAction(key)
 {
-	return /^(on|formAction$)/i.test(key) ? 'data-' + key : key;
+	return _VirtualDom_RE_on_formAction.test(key) ? 'data-' + key : key;
 }
 
 function _VirtualDom_noInnerHtmlOrFormAction(key)
@@ -2637,26 +2654,24 @@ function _VirtualDom_noInnerHtmlOrFormAction(key)
 
 function _VirtualDom_noJavaScriptUri(value)
 {
-	return /^javascript:/i.test(value.replace(/\s/g,'')) ? '' : value;
-}
-
-function _VirtualDom_noJavaScriptUri_UNUSED(value)
-{
-	return /^javascript:/i.test(value.replace(/\s/g,''))
-		? 'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'
+	return _VirtualDom_RE_js.test(value)
+		? /**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
 		: value;
 }
 
 function _VirtualDom_noJavaScriptOrHtmlUri(value)
 {
-	return /^\s*(javascript:|data:text\/html)/i.test(value) ? '' : value;
+	return _VirtualDom_RE_js_html.test(value)
+		? /**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
+		: value;
 }
 
-function _VirtualDom_noJavaScriptOrHtmlUri_UNUSED(value)
+function _VirtualDom_noJavaScriptOrHtmlJson(value)
 {
-	return /^\s*(javascript:|data:text\/html)/i.test(value)
-		? 'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'
-		: value;
+	return (typeof _Json_unwrap(value) === 'string' && _VirtualDom_RE_js_html.test(_Json_unwrap(value)))
+		? _Json_wrap(
+			/**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
+		) : value;
 }
 
 
@@ -2704,9 +2719,9 @@ var _VirtualDom_mapEventTuple = F2(function(func, tuple)
 var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
-		af: func(record.af),
-		ck: record.ck,
-		cg: record.cg
+		at: func(record.at),
+		cF: record.cF,
+		cA: record.cA
 	}
 });
 
@@ -2974,11 +2989,11 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		// 3 = Custom
 
 		var value = result.a;
-		var message = !tag ? value : tag < 3 ? value.a : value.af;
-		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.ck;
+		var message = !tag ? value : tag < 3 ? value.a : value.at;
+		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.cF;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.cg) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.cA) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -3928,11 +3943,11 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.e0,
-		impl.gh,
-		impl.fX,
+		impl.fA,
+		impl.gY,
+		impl.gB,
 		function(sendToApp, initialModel) {
-			var view = impl.gj;
+			var view = impl.g$;
 			/**/
 			var domNode = args['node'];
 			//*/
@@ -3964,12 +3979,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.e0,
-		impl.gh,
-		impl.fX,
+		impl.fA,
+		impl.gY,
+		impl.gB,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.cj && impl.cj(sendToApp)
-			var view = impl.gj;
+			var divertHrefToApp = impl.cD && impl.cD(sendToApp)
+			var view = impl.g$;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
 			var currNode = _VirtualDom_virtualize(bodyNode);
@@ -3977,12 +3992,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.eg);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.eP);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc.gc) && (_VirtualDom_doc.title = title = doc.gc);
+				(title !== doc.gS) && (_VirtualDom_doc.title = title = doc.gS);
 			});
 		}
 	);
@@ -4038,12 +4053,12 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var onUrlChange = impl.fs;
-	var onUrlRequest = impl.ft;
+	var onUrlChange = impl.f5;
+	var onUrlRequest = impl.f6;
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
-		cj: function(sendToApp)
+		cD: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -4059,9 +4074,9 @@ function _Browser_application(impl)
 					var next = $elm$url$Url$fromString(href).a;
 					sendToApp(onUrlRequest(
 						(next
-							&& curr.ds === next.ds
-							&& curr.c$ === next.c$
-							&& curr.dp.a === next.dp.a
+							&& curr.dW === next.dW
+							&& curr.$7 === next.$7
+							&& curr.dT.a === next.dT.a
 						)
 							? $elm$browser$Browser$Internal(next)
 							: $elm$browser$Browser$External(href)
@@ -4069,13 +4084,13 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		e0: function(flags)
+		fA: function(flags)
 		{
-			return A3(impl.e0, flags, _Browser_getUrl(), key);
+			return A3(impl.fA, flags, _Browser_getUrl(), key);
 		},
-		gj: impl.gj,
-		gh: impl.gh,
-		fX: impl.fX
+		g$: impl.g$,
+		gY: impl.gY,
+		gB: impl.gB
 	});
 }
 
@@ -4141,17 +4156,17 @@ var _Browser_decodeEvent = F2(function(decoder, event)
 function _Browser_visibilityInfo()
 {
 	return (typeof _VirtualDom_doc.hidden !== 'undefined')
-		? { eV: 'hidden', eu: 'visibilitychange' }
+		? { fs: 'hidden', e2: 'visibilitychange' }
 		:
 	(typeof _VirtualDom_doc.mozHidden !== 'undefined')
-		? { eV: 'mozHidden', eu: 'mozvisibilitychange' }
+		? { fs: 'mozHidden', e2: 'mozvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.msHidden !== 'undefined')
-		? { eV: 'msHidden', eu: 'msvisibilitychange' }
+		? { fs: 'msHidden', e2: 'msvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.webkitHidden !== 'undefined')
-		? { eV: 'webkitHidden', eu: 'webkitvisibilitychange' }
-		: { eV: 'hidden', eu: 'visibilitychange' };
+		? { fs: 'webkitHidden', e2: 'webkitvisibilitychange' }
+		: { fs: 'hidden', e2: 'visibilitychange' };
 }
 
 
@@ -4232,12 +4247,12 @@ var _Browser_call = F2(function(functionName, id)
 function _Browser_getViewport()
 {
 	return {
-		dA: _Browser_getScene(),
-		dS: {
-			dW: _Browser_window.pageXOffset,
-			dX: _Browser_window.pageYOffset,
-			dT: _Browser_doc.documentElement.clientWidth,
-			cX: _Browser_doc.documentElement.clientHeight
+		gl: _Browser_getScene(),
+		em: {
+			er: _Browser_window.pageXOffset,
+			es: _Browser_window.pageYOffset,
+			eo: _Browser_doc.documentElement.clientWidth,
+			fr: _Browser_doc.documentElement.clientHeight
 		}
 	};
 }
@@ -4247,8 +4262,8 @@ function _Browser_getScene()
 	var body = _Browser_doc.body;
 	var elem = _Browser_doc.documentElement;
 	return {
-		dT: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
-		cX: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
+		eo: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
+		fr: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
 	};
 }
 
@@ -4271,15 +4286,15 @@ function _Browser_getViewportOf(id)
 	return _Browser_withNode(id, function(node)
 	{
 		return {
-			dA: {
-				dT: node.scrollWidth,
-				cX: node.scrollHeight
+			gl: {
+				eo: node.scrollWidth,
+				fr: node.scrollHeight
 			},
-			dS: {
-				dW: node.scrollLeft,
-				dX: node.scrollTop,
-				dT: node.clientWidth,
-				cX: node.clientHeight
+			em: {
+				er: node.scrollLeft,
+				es: node.scrollTop,
+				eo: node.clientWidth,
+				fr: node.clientHeight
 			}
 		};
 	});
@@ -4309,18 +4324,18 @@ function _Browser_getElement(id)
 		var x = _Browser_window.pageXOffset;
 		var y = _Browser_window.pageYOffset;
 		return {
-			dA: _Browser_getScene(),
-			dS: {
-				dW: x,
-				dX: y,
-				dT: _Browser_doc.documentElement.clientWidth,
-				cX: _Browser_doc.documentElement.clientHeight
+			gl: _Browser_getScene(),
+			em: {
+				er: x,
+				es: y,
+				eo: _Browser_doc.documentElement.clientWidth,
+				fr: _Browser_doc.documentElement.clientHeight
 			},
-			eJ: {
-				dW: x + rect.left,
-				dX: y + rect.top,
-				dT: rect.width,
-				cX: rect.height
+			fg: {
+				er: x + rect.left,
+				es: y + rect.top,
+				eo: rect.width,
+				fr: rect.height
 			}
 		};
 	});
@@ -4974,25 +4989,25 @@ var $elm$core$Array$treeFromBuilder = F2(
 	});
 var $elm$core$Array$builderToArray = F2(
 	function (reverseNodeList, builder) {
-		if (!builder.n) {
+		if (!builder.s) {
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.q),
+				$elm$core$Elm$JsArray$length(builder.v),
 				$elm$core$Array$shiftStep,
 				$elm$core$Elm$JsArray$empty,
-				builder.q);
+				builder.v);
 		} else {
-			var treeLen = builder.n * $elm$core$Array$branchFactor;
+			var treeLen = builder.s * $elm$core$Array$branchFactor;
 			var depth = $elm$core$Basics$floor(
 				A2($elm$core$Basics$logBase, $elm$core$Array$branchFactor, treeLen - 1));
-			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.r) : builder.r;
-			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.n);
+			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.w) : builder.w;
+			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.s);
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.q) + treeLen,
+				$elm$core$Elm$JsArray$length(builder.v) + treeLen,
 				A2($elm$core$Basics$max, 5, depth * $elm$core$Array$shiftStep),
 				tree,
-				builder.q);
+				builder.v);
 		}
 	});
 var $elm$core$Basics$idiv = _Basics_idiv;
@@ -5005,7 +5020,7 @@ var $elm$core$Array$initializeHelp = F5(
 				return A2(
 					$elm$core$Array$builderToArray,
 					false,
-					{r: nodeList, n: (len / $elm$core$Array$branchFactor) | 0, q: tail});
+					{w: nodeList, s: (len / $elm$core$Array$branchFactor) | 0, v: tail});
 			} else {
 				var leaf = $elm$core$Array$Leaf(
 					A3($elm$core$Elm$JsArray$initialize, $elm$core$Array$branchFactor, fromIndex, fn));
@@ -5072,7 +5087,7 @@ var $elm$url$Url$Http = 0;
 var $elm$url$Url$Https = 1;
 var $elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
-		return {cS: fragment, c$: host, dn: path, dp: port_, ds: protocol, dt: query};
+		return {df: fragment, $7: host, dR: path, dT: port_, dW: protocol, dX: query};
 	});
 var $elm$core$String$contains = _String_contains;
 var $elm$core$String$length = _String_length;
@@ -5355,7 +5370,7 @@ var $author$project$Main$GetZone = function (a) {
 	return {$: 5, a: a};
 };
 var $author$project$Theme$Light = 0;
-var $author$project$Panel$defaultFlags = {cn: 0};
+var $author$project$Panel$defaultFlags = {cI: 0};
 var $elm$time$Time$Name = function (a) {
 	return {$: 0, a: a};
 };
@@ -5369,14 +5384,17 @@ var $elm$time$Time$Zone = F2(
 var $elm$time$Time$customZone = $elm$time$Time$Zone;
 var $elm$time$Time$here = _Time_here(0);
 var $author$project$Panel$GetZone = function (a) {
-	return {$: 5, a: a};
+	return {$: 6, a: a};
 };
 var $author$project$DebugMessages$DebugMessages = $elm$core$Basics$identity;
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: -2};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $author$project$DebugParser$ParsedLog = F2(
+var $author$project$DebugMessages$initWithCustomParser = function (parseFn) {
+	return {aq: false, C: _List_Nil, a7: parseFn, D: _List_Nil, N: $elm$core$Dict$empty};
+};
+var $kraklin$elm_debug_parser$DebugParser$ParsedLog = F2(
 	function (tag, value) {
-		return {R: tag, H: value};
+		return {O: tag, E: value};
 	});
 var $elm$parser$Parser$Advanced$Bad = F2(
 	function (a, b) {
@@ -5394,7 +5412,7 @@ var $elm$parser$Parser$Advanced$AddRight = F2(
 	});
 var $elm$parser$Parser$Advanced$DeadEnd = F4(
 	function (row, col, problem, contextStack) {
-		return {ez: col, eB: contextStack, fB: problem, fG: row};
+		return {aV: col, bo: contextStack, a8: problem, a9: row};
 	});
 var $elm$parser$Parser$Advanced$Empty = {$: 0};
 var $elm$parser$Parser$Advanced$fromInfo = F4(
@@ -5411,18 +5429,18 @@ var $elm$parser$Parser$Advanced$chompUntil = function (_v0) {
 	var str = _v0.a;
 	var expecting = _v0.b;
 	return function (s) {
-		var _v1 = A5($elm$parser$Parser$Advanced$findSubString, str, s.b, s.fG, s.ez, s.a);
+		var _v1 = A5($elm$parser$Parser$Advanced$findSubString, str, s.c, s.a9, s.aV, s.b);
 		var newOffset = _v1.a;
 		var newRow = _v1.b;
 		var newCol = _v1.c;
 		return _Utils_eq(newOffset, -1) ? A2(
 			$elm$parser$Parser$Advanced$Bad,
 			false,
-			A4($elm$parser$Parser$Advanced$fromInfo, newRow, newCol, expecting, s.g)) : A3(
+			A4($elm$parser$Parser$Advanced$fromInfo, newRow, newCol, expecting, s.d)) : A3(
 			$elm$parser$Parser$Advanced$Good,
-			_Utils_cmp(s.b, newOffset) < 0,
+			_Utils_cmp(s.c, newOffset) < 0,
 			0,
-			{ez: newCol, g: s.g, h: s.h, b: newOffset, fG: newRow, a: s.a});
+			{aV: newCol, d: s.d, j: s.j, c: newOffset, a9: newRow, b: s.b});
 	};
 };
 var $elm$parser$Parser$Expecting = function (a) {
@@ -5442,10 +5460,10 @@ var $elm$parser$Parser$chompUntil = function (str) {
 	return $elm$parser$Parser$Advanced$chompUntil(
 		$elm$parser$Parser$toToken(str));
 };
-var $author$project$DebugParser$deadEndsToString = function (deadEnds) {
+var $kraklin$elm_debug_parser$DebugParser$deadEndsToString = function (deadEnds) {
 	var deadEndToString = function (deadEnd) {
-		var position = 'row:' + ($elm$core$String$fromInt(deadEnd.fG) + (' col:' + ($elm$core$String$fromInt(deadEnd.ez) + '\n')));
-		var _v0 = deadEnd.fB;
+		var position = 'row:' + ($elm$core$String$fromInt(deadEnd.a9) + (' col:' + ($elm$core$String$fromInt(deadEnd.aV) + '\n')));
+		var _v0 = deadEnd.a8;
 		switch (_v0.$) {
 			case 0:
 				var str = _v0.a;
@@ -5496,13 +5514,13 @@ var $elm$parser$Parser$Advanced$fromState = F2(
 		return A2(
 			$elm$parser$Parser$Advanced$AddRight,
 			$elm$parser$Parser$Advanced$Empty,
-			A4($elm$parser$Parser$Advanced$DeadEnd, s.fG, s.ez, x, s.g));
+			A4($elm$parser$Parser$Advanced$DeadEnd, s.a9, s.aV, x, s.d));
 	});
 var $elm$parser$Parser$Advanced$end = function (x) {
 	return function (s) {
 		return _Utils_eq(
-			$elm$core$String$length(s.a),
-			s.b) ? A3($elm$parser$Parser$Advanced$Good, false, 0, s) : A2(
+			$elm$core$String$length(s.b),
+			s.c) ? A3($elm$parser$Parser$Advanced$Good, false, 0, s) : A2(
 			$elm$parser$Parser$Advanced$Bad,
 			false,
 			A2($elm$parser$Parser$Advanced$fromState, s, x));
@@ -5531,7 +5549,7 @@ var $elm$parser$Parser$Advanced$mapChompedString = F2(
 					p,
 					A2(
 						func,
-						A3($elm$core$String$slice, s0.b, s1.b, s0.a),
+						A3($elm$core$String$slice, s0.c, s1.c, s0.b),
 						a),
 					s1);
 			}
@@ -5594,43 +5612,45 @@ var $elm$core$Result$mapError = F2(
 				f(e));
 		}
 	});
-var $author$project$Expandable$Array = 2;
 var $elm$parser$Parser$Done = function (a) {
 	return {$: 1, a: a};
 };
-var $author$project$Expandable$ElmBool = function (a) {
-	return {$: 4, a: a};
-};
-var $author$project$Expandable$ElmDict = F2(
-	function (a, b) {
-		return {$: 14, a: a, b: b};
-	});
-var $author$project$Expandable$ElmFloat = function (a) {
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBool = function (a) {
 	return {$: 3, a: a};
 };
-var $author$project$Expandable$ElmRecord = F2(
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmDict = function (a) {
+	return {$: 3, a: a};
+};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber = function (a) {
+	return {$: 2, a: a};
+};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmRecord = function (a) {
+	return {$: 2, a: a};
+};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence = F2(
 	function (a, b) {
-		return {$: 12, a: a, b: b};
+		return {$: 0, a: a, b: b};
 	});
-var $author$project$Expandable$ElmSequence = F3(
-	function (a, b, c) {
-		return {$: 10, a: a, b: b, c: c};
-	});
-var $author$project$Expandable$ElmTuple = F2(
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmType = F2(
 	function (a, b) {
-		return {$: 11, a: a, b: b};
+		return {$: 1, a: a, b: b};
 	});
-var $author$project$Expandable$ElmType = F3(
-	function (a, b, c) {
-		return {$: 13, a: a, b: b, c: c};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmUnit = {$: 6};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable = F2(
+	function (a, b) {
+		return {$: 1, a: a, b: b};
 	});
-var $author$project$Expandable$ElmUnit = {$: 7};
 var $elm$parser$Parser$Forbidden = 0;
-var $author$project$Expandable$List = 1;
 var $elm$parser$Parser$Loop = function (a) {
 	return {$: 0, a: a};
 };
-var $author$project$Expandable$Set = 0;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain = function (a) {
+	return {$: 0, a: a};
+};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$SeqArray = 2;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$SeqList = 1;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$SeqSet = 0;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$SeqTuple = 3;
 var $elm$parser$Parser$Advanced$andThen = F2(
 	function (callback, _v0) {
 		var parseA = _v0;
@@ -5818,15 +5838,20 @@ var $elm$core$Tuple$pair = F2(
 	function (a, b) {
 		return _Utils_Tuple2(a, b);
 	});
-var $author$project$Expandable$ElmBytes = function (a) {
-	return {$: 9, a: a};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBytes = function (a) {
+	return {$: 8, a: a};
 };
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
 var $elm$parser$Parser$ExpectingInt = {$: 1};
 var $elm$parser$Parser$Advanced$consumeBase = _Parser_consumeBase;
 var $elm$parser$Parser$Advanced$consumeBase16 = _Parser_consumeBase16;
 var $elm$parser$Parser$Advanced$bumpOffset = F2(
 	function (newOffset, s) {
-		return {ez: s.ez + (newOffset - s.b), g: s.g, h: s.h, b: newOffset, fG: s.fG, a: s.a};
+		return {aV: s.aV + (newOffset - s.c), d: s.d, j: s.j, c: newOffset, a9: s.a9, b: s.b};
 	});
 var $elm$parser$Parser$Advanced$chompBase10 = _Parser_chompBase10;
 var $elm$parser$Parser$Advanced$isAsciiCode = _Parser_isAsciiCode;
@@ -5862,7 +5887,7 @@ var $elm$parser$Parser$Advanced$finalizeInt = F5(
 			var toValue = handler.a;
 			return _Utils_eq(startOffset, endOffset) ? A2(
 				$elm$parser$Parser$Advanced$Bad,
-				_Utils_cmp(s.b, startOffset) < 0,
+				_Utils_cmp(s.c, startOffset) < 0,
 				A2($elm$parser$Parser$Advanced$fromState, s, invalid)) : A3(
 				$elm$parser$Parser$Advanced$Good,
 				true,
@@ -5874,21 +5899,21 @@ var $elm$core$String$toFloat = _String_toFloat;
 var $elm$parser$Parser$Advanced$finalizeFloat = F6(
 	function (invalid, expecting, intSettings, floatSettings, intPair, s) {
 		var intOffset = intPair.a;
-		var floatOffset = A2($elm$parser$Parser$Advanced$consumeDotAndExp, intOffset, s.a);
+		var floatOffset = A2($elm$parser$Parser$Advanced$consumeDotAndExp, intOffset, s.b);
 		if (floatOffset < 0) {
 			return A2(
 				$elm$parser$Parser$Advanced$Bad,
 				true,
-				A4($elm$parser$Parser$Advanced$fromInfo, s.fG, s.ez - (floatOffset + s.b), invalid, s.g));
+				A4($elm$parser$Parser$Advanced$fromInfo, s.a9, s.aV - (floatOffset + s.c), invalid, s.d));
 		} else {
-			if (_Utils_eq(s.b, floatOffset)) {
+			if (_Utils_eq(s.c, floatOffset)) {
 				return A2(
 					$elm$parser$Parser$Advanced$Bad,
 					false,
 					A2($elm$parser$Parser$Advanced$fromState, s, expecting));
 			} else {
 				if (_Utils_eq(intOffset, floatOffset)) {
-					return A5($elm$parser$Parser$Advanced$finalizeInt, invalid, intSettings, s.b, intPair, s);
+					return A5($elm$parser$Parser$Advanced$finalizeInt, invalid, intSettings, s.c, intPair, s);
 				} else {
 					if (floatSettings.$ === 1) {
 						var x = floatSettings.a;
@@ -5899,7 +5924,7 @@ var $elm$parser$Parser$Advanced$finalizeFloat = F6(
 					} else {
 						var toValue = floatSettings.a;
 						var _v1 = $elm$core$String$toFloat(
-							A3($elm$core$String$slice, s.b, floatOffset, s.a));
+							A3($elm$core$String$slice, s.c, floatOffset, s.b));
 						if (_v1.$ === 1) {
 							return A2(
 								$elm$parser$Parser$Advanced$Bad,
@@ -5920,43 +5945,43 @@ var $elm$parser$Parser$Advanced$finalizeFloat = F6(
 	});
 var $elm$parser$Parser$Advanced$number = function (c) {
 	return function (s) {
-		if (A3($elm$parser$Parser$Advanced$isAsciiCode, 48, s.b, s.a)) {
-			var zeroOffset = s.b + 1;
+		if (A3($elm$parser$Parser$Advanced$isAsciiCode, 48, s.c, s.b)) {
+			var zeroOffset = s.c + 1;
 			var baseOffset = zeroOffset + 1;
-			return A3($elm$parser$Parser$Advanced$isAsciiCode, 120, zeroOffset, s.a) ? A5(
+			return A3($elm$parser$Parser$Advanced$isAsciiCode, 120, zeroOffset, s.b) ? A5(
 				$elm$parser$Parser$Advanced$finalizeInt,
-				c.e6,
-				c.c_,
+				c.fG,
+				c.dn,
 				baseOffset,
-				A2($elm$parser$Parser$Advanced$consumeBase16, baseOffset, s.a),
-				s) : (A3($elm$parser$Parser$Advanced$isAsciiCode, 111, zeroOffset, s.a) ? A5(
+				A2($elm$parser$Parser$Advanced$consumeBase16, baseOffset, s.b),
+				s) : (A3($elm$parser$Parser$Advanced$isAsciiCode, 111, zeroOffset, s.b) ? A5(
 				$elm$parser$Parser$Advanced$finalizeInt,
-				c.e6,
-				c.dj,
+				c.fG,
+				c.dM,
 				baseOffset,
-				A3($elm$parser$Parser$Advanced$consumeBase, 8, baseOffset, s.a),
-				s) : (A3($elm$parser$Parser$Advanced$isAsciiCode, 98, zeroOffset, s.a) ? A5(
+				A3($elm$parser$Parser$Advanced$consumeBase, 8, baseOffset, s.b),
+				s) : (A3($elm$parser$Parser$Advanced$isAsciiCode, 98, zeroOffset, s.b) ? A5(
 				$elm$parser$Parser$Advanced$finalizeInt,
-				c.e6,
-				c.cA,
+				c.fG,
+				c.cX,
 				baseOffset,
-				A3($elm$parser$Parser$Advanced$consumeBase, 2, baseOffset, s.a),
+				A3($elm$parser$Parser$Advanced$consumeBase, 2, baseOffset, s.b),
 				s) : A6(
 				$elm$parser$Parser$Advanced$finalizeFloat,
-				c.e6,
-				c.cO,
-				c.c6,
-				c.cQ,
+				c.fG,
+				c.da,
+				c.dw,
+				c.dc,
 				_Utils_Tuple2(zeroOffset, 0),
 				s)));
 		} else {
 			return A6(
 				$elm$parser$Parser$Advanced$finalizeFloat,
-				c.e6,
-				c.cO,
-				c.c6,
-				c.cQ,
-				A3($elm$parser$Parser$Advanced$consumeBase, 10, s.b, s.a),
+				c.fG,
+				c.da,
+				c.dw,
+				c.dc,
+				A3($elm$parser$Parser$Advanced$consumeBase, 10, s.c, s.b),
 				s);
 		}
 	};
@@ -5965,13 +5990,13 @@ var $elm$parser$Parser$Advanced$int = F2(
 	function (expecting, invalid) {
 		return $elm$parser$Parser$Advanced$number(
 			{
-				cA: $elm$core$Result$Err(invalid),
-				cO: expecting,
-				cQ: $elm$core$Result$Err(invalid),
-				c_: $elm$core$Result$Err(invalid),
-				c6: $elm$core$Result$Ok($elm$core$Basics$identity),
-				e6: invalid,
-				dj: $elm$core$Result$Err(invalid)
+				cX: $elm$core$Result$Err(invalid),
+				da: expecting,
+				dc: $elm$core$Result$Err(invalid),
+				dn: $elm$core$Result$Err(invalid),
+				dw: $elm$core$Result$Ok($elm$core$Basics$identity),
+				fG: invalid,
+				dM: $elm$core$Result$Err(invalid)
 			});
 	});
 var $elm$parser$Parser$int = A2($elm$parser$Parser$Advanced$int, $elm$parser$Parser$ExpectingInt, $elm$parser$Parser$ExpectingInt);
@@ -5988,7 +6013,7 @@ var $elm$parser$Parser$Advanced$token = function (_v0) {
 	var expecting = _v0.b;
 	var progress = !$elm$core$String$isEmpty(str);
 	return function (s) {
-		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, str, s.b, s.fG, s.ez, s.a);
+		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, str, s.c, s.a9, s.aV, s.b);
 		var newOffset = _v1.a;
 		var newRow = _v1.b;
 		var newCol = _v1.c;
@@ -5999,25 +6024,26 @@ var $elm$parser$Parser$Advanced$token = function (_v0) {
 			$elm$parser$Parser$Advanced$Good,
 			progress,
 			0,
-			{ez: newCol, g: s.g, h: s.h, b: newOffset, fG: newRow, a: s.a});
+			{aV: newCol, d: s.d, j: s.j, c: newOffset, a9: newRow, b: s.b});
 	};
 };
 var $elm$parser$Parser$token = function (str) {
 	return $elm$parser$Parser$Advanced$token(
 		$elm$parser$Parser$toToken(str));
 };
-var $author$project$DebugParser$parseBytes = $elm$parser$Parser$backtrackable(
+var $kraklin$elm_debug_parser$DebugParser$parseBytes = $elm$parser$Parser$backtrackable(
 	A2(
 		$elm$parser$Parser$keeper,
 		A2(
 			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed($author$project$Expandable$ElmBytes),
+			$elm$parser$Parser$succeed(
+				A2($elm$core$Basics$composeL, $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain, $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBytes)),
 			$elm$parser$Parser$token('<')),
 		A2(
 			$elm$parser$Parser$ignorer,
 			$elm$parser$Parser$int,
 			$elm$parser$Parser$token(' bytes>'))));
-var $author$project$Expandable$ElmChar = function (a) {
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar = function (a) {
 	return {$: 1, a: a};
 };
 var $elm$core$Basics$composeR = F3(
@@ -6047,13 +6073,14 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$DebugParser$parseChar = $elm$parser$Parser$oneOf(
+var $kraklin$elm_debug_parser$DebugParser$parseChar = $elm$parser$Parser$oneOf(
 	_List_fromArray(
 		[
 			A2(
 			$elm$parser$Parser$map,
 			function (_v0) {
-				return $author$project$Expandable$ElmChar('\'');
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\''));
 			},
 			A2(
 				$elm$parser$Parser$ignorer,
@@ -6061,16 +6088,69 @@ var $author$project$DebugParser$parseChar = $elm$parser$Parser$oneOf(
 				$elm$parser$Parser$token('\'\\\'\''))),
 			A2(
 			$elm$parser$Parser$map,
+			function (_v1) {
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\t'));
+			},
+			A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($elm$core$Basics$identity),
+				$elm$parser$Parser$token('\'\\t\''))),
+			A2(
+			$elm$parser$Parser$map,
+			function (_v2) {
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\n'));
+			},
+			A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($elm$core$Basics$identity),
+				$elm$parser$Parser$token('\'\\n\''))),
+			A2(
+			$elm$parser$Parser$map,
+			function (_v3) {
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\u000B'));
+			},
+			A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($elm$core$Basics$identity),
+				$elm$parser$Parser$token('\'\\v\''))),
+			A2(
+			$elm$parser$Parser$map,
+			function (_v4) {
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\u000D'));
+			},
+			A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($elm$core$Basics$identity),
+				$elm$parser$Parser$token('\'\\r\''))),
+			A2(
+			$elm$parser$Parser$map,
+			function (_v5) {
+				return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar('\u0000'));
+			},
+			A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($elm$core$Basics$identity),
+				$elm$parser$Parser$token('\'\\0\''))),
+			A2(
+			$elm$parser$Parser$map,
 			A2(
 				$elm$core$Basics$composeR,
 				$elm$core$String$toList,
 				A2(
 					$elm$core$Basics$composeR,
-					$elm$core$List$head,
+					$elm$core$List$reverse,
 					A2(
 						$elm$core$Basics$composeR,
-						$elm$core$Maybe$withDefault('x'),
-						$author$project$Expandable$ElmChar))),
+						$elm$core$List$head,
+						A2(
+							$elm$core$Basics$composeR,
+							$elm$core$Maybe$withDefault('x'),
+							A2($elm$core$Basics$composeR, $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmChar, $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain))))),
 			A2(
 				$elm$parser$Parser$keeper,
 				A2(
@@ -6088,7 +6168,7 @@ var $elm$parser$Parser$Advanced$isSubChar = _Parser_isSubChar;
 var $elm$parser$Parser$Advanced$chompIf = F2(
 	function (isGood, expecting) {
 		return function (s) {
-			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, s.b, s.a);
+			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, s.c, s.b);
 			return _Utils_eq(newOffset, -1) ? A2(
 				$elm$parser$Parser$Advanced$Bad,
 				false,
@@ -6096,11 +6176,11 @@ var $elm$parser$Parser$Advanced$chompIf = F2(
 				$elm$parser$Parser$Advanced$Good,
 				true,
 				0,
-				{ez: 1, g: s.g, h: s.h, b: s.b + 1, fG: s.fG + 1, a: s.a}) : A3(
+				{aV: 1, d: s.d, j: s.j, c: s.c + 1, a9: s.a9 + 1, b: s.b}) : A3(
 				$elm$parser$Parser$Advanced$Good,
 				true,
 				0,
-				{ez: s.ez + 1, g: s.g, h: s.h, b: newOffset, fG: s.fG, a: s.a}));
+				{aV: s.aV + 1, d: s.d, j: s.j, c: newOffset, a9: s.a9, b: s.b}));
 		};
 	});
 var $elm$parser$Parser$chompIf = function (isGood) {
@@ -6110,13 +6190,13 @@ var $elm$parser$Parser$Advanced$chompWhileHelp = F5(
 	function (isGood, offset, row, col, s0) {
 		chompWhileHelp:
 		while (true) {
-			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, offset, s0.a);
+			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, offset, s0.b);
 			if (_Utils_eq(newOffset, -1)) {
 				return A3(
 					$elm$parser$Parser$Advanced$Good,
-					_Utils_cmp(s0.b, offset) < 0,
+					_Utils_cmp(s0.c, offset) < 0,
 					0,
-					{ez: col, g: s0.g, h: s0.h, b: offset, fG: row, a: s0.a});
+					{aV: col, d: s0.d, j: s0.j, c: offset, a9: row, b: s0.b});
 			} else {
 				if (_Utils_eq(newOffset, -2)) {
 					var $temp$isGood = isGood,
@@ -6148,11 +6228,11 @@ var $elm$parser$Parser$Advanced$chompWhileHelp = F5(
 	});
 var $elm$parser$Parser$Advanced$chompWhile = function (isGood) {
 	return function (s) {
-		return A5($elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.b, s.fG, s.ez, s);
+		return A5($elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.c, s.a9, s.aV, s);
 	};
 };
 var $elm$parser$Parser$chompWhile = $elm$parser$Parser$Advanced$chompWhile;
-var $author$project$DebugParser$parseTypeName = $elm$parser$Parser$getChompedString(
+var $kraklin$elm_debug_parser$DebugParser$parseTypeName = $elm$parser$Parser$getChompedString(
 	A2(
 		$elm$parser$Parser$ignorer,
 		A2(
@@ -6163,26 +6243,33 @@ var $author$project$DebugParser$parseTypeName = $elm$parser$Parser$getChompedStr
 			function (c) {
 				return $elm$core$Char$isAlphaNum(c) || (c === '_');
 			})));
-var $author$project$DebugParser$parseCustomTypeWithoutValue = A2(
+var $kraklin$elm_debug_parser$DebugParser$parseCustomTypeWithoutValue = A2(
 	$elm$parser$Parser$keeper,
 	$elm$parser$Parser$succeed(
 		function (name) {
 			switch (name) {
 				case 'True':
-					return $author$project$Expandable$ElmBool(true);
+					return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBool(true));
 				case 'False':
-					return $author$project$Expandable$ElmBool(false);
+					return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBool(false));
 				case 'NaN':
-					return $author$project$Expandable$ElmFloat(0 / 0);
+					return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(0 / 0));
 				case 'Infinity':
-					return $author$project$Expandable$ElmFloat(1 / 0);
+					return $kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(1 / 0));
 				default:
-					return A3($author$project$Expandable$ElmType, false, name, _List_Nil);
+					return A2(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+						false,
+						A2($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmType, name, _List_Nil));
 			}
 		}),
-	$author$project$DebugParser$parseTypeName);
-var $author$project$Expandable$ElmFile = function (a) {
-	return {$: 8, a: a};
+	$kraklin$elm_debug_parser$DebugParser$parseTypeName);
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmFile = function (a) {
+	return {$: 7, a: a};
 };
 var $elm$core$Maybe$map = F2(
 	function (f, maybe) {
@@ -6210,20 +6297,23 @@ var $elm$parser$Parser$problem = function (msg) {
 	return $elm$parser$Parser$Advanced$problem(
 		$elm$parser$Parser$Problem(msg));
 };
+var $elm$core$String$concat = function (strings) {
+	return A2($elm$core$String$join, '', strings);
+};
 var $elm$core$String$cons = _String_cons;
 var $elm$core$String$fromChar = function (_char) {
 	return A2($elm$core$String$cons, _char, '');
 };
-var $author$project$DebugParser$addHex = F2(
+var $kraklin$elm_debug_parser$DebugParser$addHex = F2(
 	function (_char, total) {
 		var code = $elm$core$Char$toCode(_char);
 		return ((48 <= code) && (code <= 57)) ? ((16 * total) + (code - 48)) : (((65 <= code) && (code <= 70)) ? ((16 * total) + ((10 + code) - 65)) : ((16 * total) + ((10 + code) - 97)));
 	});
 var $elm$core$String$foldl = _String_foldl;
 var $elm$core$Char$fromCode = _Char_fromCode;
-var $author$project$DebugParser$codeToChar = function (str) {
+var $kraklin$elm_debug_parser$DebugParser$codeToChar = function (str) {
 	var length = $elm$core$String$length(str);
-	var code = A3($elm$core$String$foldl, $author$project$DebugParser$addHex, 0, str);
+	var code = A3($elm$core$String$foldl, $kraklin$elm_debug_parser$DebugParser$addHex, 0, str);
 	return ((4 <= length) && (length <= 6)) ? $elm$parser$Parser$problem('code point must have between 4 and 6 digits') : (((0 <= code) && (code <= 1114111)) ? $elm$parser$Parser$succeed(
 		$elm$core$Char$fromCode(code)) : $elm$parser$Parser$problem('code point must be between 0 and 0x10FFFF'));
 };
@@ -6231,12 +6321,12 @@ var $elm$core$Char$isHexDigit = function (_char) {
 	var code = $elm$core$Char$toCode(_char);
 	return ((48 <= code) && (code <= 57)) || (((65 <= code) && (code <= 70)) || ((97 <= code) && (code <= 102)));
 };
-var $author$project$DebugParser$unicode = A2(
+var $kraklin$elm_debug_parser$DebugParser$unicode = A2(
 	$elm$parser$Parser$andThen,
-	$author$project$DebugParser$codeToChar,
+	$kraklin$elm_debug_parser$DebugParser$codeToChar,
 	$elm$parser$Parser$getChompedString(
 		$elm$parser$Parser$chompWhile($elm$core$Char$isHexDigit)));
-var $author$project$DebugParser$stringHelp = F3(
+var $kraklin$elm_debug_parser$DebugParser$stringHelp = F3(
 	function (endString, charCheckFn, revChunks) {
 		return $elm$parser$Parser$oneOf(
 			_List_fromArray(
@@ -6304,7 +6394,7 @@ var $author$project$DebugParser$stringHelp = F3(
 									$elm$parser$Parser$token('u{')),
 								A2(
 									$elm$parser$Parser$ignorer,
-									$author$project$DebugParser$unicode,
+									$kraklin$elm_debug_parser$DebugParser$unicode,
 									$elm$parser$Parser$token('}')))
 							]))),
 					$elm$parser$Parser$oneOf(
@@ -6315,9 +6405,7 @@ var $author$project$DebugParser$stringHelp = F3(
 							function (_v7) {
 								return $elm$parser$Parser$Done(
 									$elm$core$Maybe$Just(
-										A2(
-											$elm$core$String$join,
-											'',
+										$elm$core$String$concat(
 											$elm$core$List$reverse(revChunks))));
 							},
 							$elm$parser$Parser$token(endString)),
@@ -6338,14 +6426,15 @@ var $author$project$DebugParser$stringHelp = F3(
 						$elm$parser$Parser$chompWhile(charCheckFn)))
 				]));
 	});
-var $author$project$DebugParser$parseFile = A2(
+var $kraklin$elm_debug_parser$DebugParser$parseFile = A2(
 	$elm$parser$Parser$andThen,
 	A2(
 		$elm$core$Basics$composeR,
 		$elm$core$Maybe$map(
 			function (str) {
 				return $elm$parser$Parser$succeed(
-					$author$project$Expandable$ElmFile(str));
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmFile(str)));
 			}),
 		$elm$core$Maybe$withDefault(
 			$elm$parser$Parser$problem('File has no closing bracket'))),
@@ -6359,13 +6448,13 @@ var $author$project$DebugParser$parseFile = A2(
 			$elm$parser$Parser$loop,
 			_List_Nil,
 			A2(
-				$author$project$DebugParser$stringHelp,
+				$kraklin$elm_debug_parser$DebugParser$stringHelp,
 				'>',
 				function (c) {
 					return c !== '>';
 				}))));
-var $author$project$Expandable$ElmFunction = {$: 5};
-var $author$project$Expandable$ElmInternals = {$: 6};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmFunction = {$: 4};
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmInternals = {$: 5};
 var $elm$parser$Parser$ExpectingKeyword = function (a) {
 	return {$: 9, a: a};
 };
@@ -6374,7 +6463,7 @@ var $elm$parser$Parser$Advanced$keyword = function (_v0) {
 	var expecting = _v0.b;
 	var progress = !$elm$core$String$isEmpty(kwd);
 	return function (s) {
-		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, kwd, s.b, s.fG, s.ez, s.a);
+		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, kwd, s.c, s.a9, s.aV, s.b);
 		var newOffset = _v1.a;
 		var newRow = _v1.b;
 		var newCol = _v1.c;
@@ -6384,14 +6473,14 @@ var $elm$parser$Parser$Advanced$keyword = function (_v0) {
 				return $elm$core$Char$isAlphaNum(c) || (c === '_');
 			},
 			newOffset,
-			s.a))) ? A2(
+			s.b))) ? A2(
 			$elm$parser$Parser$Advanced$Bad,
 			false,
 			A2($elm$parser$Parser$Advanced$fromState, s, expecting)) : A3(
 			$elm$parser$Parser$Advanced$Good,
 			progress,
 			0,
-			{ez: newCol, g: s.g, h: s.h, b: newOffset, fG: newRow, a: s.a});
+			{aV: newCol, d: s.d, j: s.j, c: newOffset, a9: newRow, b: s.b});
 	};
 };
 var $elm$parser$Parser$keyword = function (kwd) {
@@ -6401,37 +6490,21 @@ var $elm$parser$Parser$keyword = function (kwd) {
 			kwd,
 			$elm$parser$Parser$ExpectingKeyword(kwd)));
 };
-var $author$project$DebugParser$parseKeywords = $elm$parser$Parser$oneOf(
-	_List_fromArray(
-		[
-			A2(
-			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed($author$project$Expandable$ElmInternals),
-			$elm$parser$Parser$keyword('<internals>')),
-			A2(
-			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed($author$project$Expandable$ElmFunction),
-			$elm$parser$Parser$keyword('<function>'))
-		]));
-var $author$project$Expandable$ElmInt = function (a) {
-	return {$: 2, a: a};
-};
-var $elm$parser$Parser$ExpectingFloat = {$: 5};
-var $elm$parser$Parser$Advanced$float = F2(
-	function (expecting, invalid) {
-		return $elm$parser$Parser$Advanced$number(
-			{
-				cA: $elm$core$Result$Err(invalid),
-				cO: expecting,
-				cQ: $elm$core$Result$Ok($elm$core$Basics$identity),
-				c_: $elm$core$Result$Err(invalid),
-				c6: $elm$core$Result$Ok($elm$core$Basics$toFloat),
-				e6: invalid,
-				dj: $elm$core$Result$Err(invalid)
-			});
-	});
-var $elm$parser$Parser$float = A2($elm$parser$Parser$Advanced$float, $elm$parser$Parser$ExpectingFloat, $elm$parser$Parser$ExpectingFloat);
-var $elm$core$Basics$round = _Basics_round;
+var $kraklin$elm_debug_parser$DebugParser$parseKeywords = A2(
+	$elm$parser$Parser$map,
+	$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain,
+	$elm$parser$Parser$oneOf(
+		_List_fromArray(
+			[
+				A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmInternals),
+				$elm$parser$Parser$keyword('<internals>')),
+				A2(
+				$elm$parser$Parser$ignorer,
+				$elm$parser$Parser$succeed($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmFunction),
+				$elm$parser$Parser$keyword('<function>'))
+			])));
 var $elm$parser$Parser$ExpectingSymbol = function (a) {
 	return {$: 8, a: a};
 };
@@ -6443,59 +6516,82 @@ var $elm$parser$Parser$symbol = function (str) {
 			str,
 			$elm$parser$Parser$ExpectingSymbol(str)));
 };
-var $author$project$DebugParser$parseNumber = $elm$parser$Parser$oneOf(
-	_List_fromArray(
-		[
-			A2(
-			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed(
-				$author$project$Expandable$ElmFloat(0 / 0)),
-			$elm$parser$Parser$keyword('NaN')),
-			A2(
-			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed(
-				$author$project$Expandable$ElmFloat(1 / 0)),
-			$elm$parser$Parser$keyword('Infinity')),
-			A2(
-			$elm$parser$Parser$ignorer,
-			$elm$parser$Parser$succeed(
-				$author$project$Expandable$ElmFloat(-(1 / 0))),
-			$elm$parser$Parser$keyword('-Infinity')),
-			A2(
-			$elm$parser$Parser$map,
-			function (num) {
-				return _Utils_eq(
-					num,
-					$elm$core$Basics$round(num)) ? $author$project$Expandable$ElmInt(
-					$elm$core$Basics$round(num)) : $author$project$Expandable$ElmFloat(num);
-			},
-			$elm$parser$Parser$oneOf(
-				_List_fromArray(
-					[
-						A2(
-						$elm$parser$Parser$keeper,
-						A2(
-							$elm$parser$Parser$ignorer,
-							$elm$parser$Parser$succeed($elm$core$Basics$negate),
-							$elm$parser$Parser$symbol('-')),
-						$elm$parser$Parser$float),
-						$elm$parser$Parser$float
-					])))
-		]));
-var $author$project$Expandable$ElmString = function (a) {
+var $kraklin$elm_debug_parser$DebugParser$parseNumber = function () {
+	var number = A2(
+		$elm$parser$Parser$andThen,
+		function (str) {
+			var _v1 = $elm$core$String$toFloat(str);
+			if (!_v1.$) {
+				var _float = _v1.a;
+				return $elm$parser$Parser$succeed(
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(_float));
+			} else {
+				return $elm$parser$Parser$problem('Unable to parse number');
+			}
+		},
+		$elm$parser$Parser$getChompedString(
+			$elm$parser$Parser$chompWhile(
+				function (_char) {
+					return $elm$core$Char$isDigit(_char) || ((_char === '.') || ((_char === '+') || ((_char === 'e') || (_char === '-'))));
+				})));
+	var negateNumber = function (value) {
+		if (value.$ === 2) {
+			var _float = value.a;
+			return $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(-_float);
+		} else {
+			return value;
+		}
+	};
+	return A2(
+		$elm$parser$Parser$map,
+		$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain,
+		$elm$parser$Parser$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$parser$Parser$ignorer,
+					$elm$parser$Parser$succeed(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(0 / 0)),
+					$elm$parser$Parser$keyword('NaN')),
+					A2(
+					$elm$parser$Parser$ignorer,
+					$elm$parser$Parser$succeed(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(1 / 0)),
+					$elm$parser$Parser$keyword('Infinity')),
+					A2(
+					$elm$parser$Parser$ignorer,
+					$elm$parser$Parser$succeed(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(-(1 / 0))),
+					$elm$parser$Parser$keyword('-Infinity')),
+					$elm$parser$Parser$oneOf(
+					_List_fromArray(
+						[
+							A2(
+							$elm$parser$Parser$keeper,
+							A2(
+								$elm$parser$Parser$ignorer,
+								$elm$parser$Parser$succeed(negateNumber),
+								$elm$parser$Parser$symbol('-')),
+							number),
+							number
+						]))
+				])));
+}();
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmString = function (a) {
 	return {$: 0, a: a};
 };
-var $author$project$DebugParser$isUninteresting = function (_char) {
+var $kraklin$elm_debug_parser$DebugParser$isUninteresting = function (_char) {
 	return (_char !== '\\') && (_char !== '\"');
 };
-var $author$project$DebugParser$parseString = A2(
+var $kraklin$elm_debug_parser$DebugParser$parseString = A2(
 	$elm$parser$Parser$andThen,
 	A2(
 		$elm$core$Basics$composeR,
 		$elm$core$Maybe$map(
 			function (str) {
 				return $elm$parser$Parser$succeed(
-					$author$project$Expandable$ElmString(str));
+					$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmString(str)));
 			}),
 		$elm$core$Maybe$withDefault(
 			$elm$parser$Parser$problem('One string has no closing double quotes'))),
@@ -6508,8 +6604,8 @@ var $author$project$DebugParser$parseString = A2(
 		A2(
 			$elm$parser$Parser$loop,
 			_List_Nil,
-			A2($author$project$DebugParser$stringHelp, '\"', $author$project$DebugParser$isUninteresting))));
-var $author$project$DebugParser$parseVariableName = $elm$parser$Parser$getChompedString(
+			A2($kraklin$elm_debug_parser$DebugParser$stringHelp, '\"', $kraklin$elm_debug_parser$DebugParser$isUninteresting))));
+var $kraklin$elm_debug_parser$DebugParser$parseVariableName = $elm$parser$Parser$getChompedString(
 	A2(
 		$elm$parser$Parser$ignorer,
 		A2(
@@ -6681,17 +6777,17 @@ var $elm$parser$Parser$Advanced$sequenceEnd = F5(
 var $elm$parser$Parser$Advanced$sequence = function (i) {
 	return A2(
 		$elm$parser$Parser$Advanced$skip,
-		$elm$parser$Parser$Advanced$token(i.bf),
+		$elm$parser$Parser$Advanced$token(i.cE),
 		A2(
 			$elm$parser$Parser$Advanced$skip,
-			i.be,
+			i.d7,
 			A5(
 				$elm$parser$Parser$Advanced$sequenceEnd,
-				$elm$parser$Parser$Advanced$token(i.a3),
-				i.be,
-				i.a5,
-				$elm$parser$Parser$Advanced$token(i.bd),
-				i.bj)));
+				$elm$parser$Parser$Advanced$token(i.c8),
+				i.d7,
+				i.dy,
+				$elm$parser$Parser$Advanced$token(i.d2),
+				i.eg)));
 };
 var $elm$parser$Parser$Advanced$Forbidden = 0;
 var $elm$parser$Parser$Advanced$Mandatory = 2;
@@ -6709,12 +6805,12 @@ var $elm$parser$Parser$toAdvancedTrailing = function (trailing) {
 var $elm$parser$Parser$sequence = function (i) {
 	return $elm$parser$Parser$Advanced$sequence(
 		{
-			a3: $elm$parser$Parser$toToken(i.a3),
-			a5: i.a5,
-			bd: $elm$parser$Parser$toToken(i.bd),
-			be: i.be,
-			bf: $elm$parser$Parser$toToken(i.bf),
-			bj: $elm$parser$Parser$toAdvancedTrailing(i.bj)
+			c8: $elm$parser$Parser$toToken(i.c8),
+			dy: i.dy,
+			d2: $elm$parser$Parser$toToken(i.d2),
+			d7: i.d7,
+			cE: $elm$parser$Parser$toToken(i.cE),
+			eg: $elm$parser$Parser$toAdvancedTrailing(i.eg)
 		});
 };
 var $elm$parser$Parser$Advanced$spaces = $elm$parser$Parser$Advanced$chompWhile(
@@ -6722,7 +6818,7 @@ var $elm$parser$Parser$Advanced$spaces = $elm$parser$Parser$Advanced$chompWhile(
 		return (c === ' ') || ((c === '\n') || (c === '\r'));
 	});
 var $elm$parser$Parser$spaces = $elm$parser$Parser$Advanced$spaces;
-var $author$project$DebugParser$typeHelp = function (values) {
+var $kraklin$elm_debug_parser$DebugParser$typeHelp = function (values) {
 	return $elm$parser$Parser$oneOf(
 		_List_fromArray(
 			[
@@ -6737,115 +6833,127 @@ var $author$project$DebugParser$typeHelp = function (values) {
 									A2($elm$core$List$cons, value, values));
 							}),
 						$elm$parser$Parser$token(' ')),
-					$author$project$DebugParser$cyclic$parseValueWithoutCustomType())),
+					$kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithoutCustomType())),
 				$elm$parser$Parser$succeed(
 				$elm$parser$Parser$Done(values))
 			]));
 };
-function $author$project$DebugParser$cyclic$parseValueWithoutCustomType() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithoutCustomType() {
 	return $elm$parser$Parser$oneOf(
 		_List_fromArray(
 			[
-				$author$project$DebugParser$cyclic$parseRecord(),
-				$author$project$DebugParser$cyclic$parseArray(),
-				$author$project$DebugParser$cyclic$parseSet(),
-				$author$project$DebugParser$cyclic$parseDict(),
-				$author$project$DebugParser$cyclic$parseList(),
-				$author$project$DebugParser$parseKeywords,
-				$author$project$DebugParser$parseCustomTypeWithoutValue,
-				$author$project$DebugParser$parseNumber,
-				$author$project$DebugParser$cyclic$parseValueWithParenthesis(),
-				$author$project$DebugParser$parseChar,
-				$author$project$DebugParser$parseString,
-				$author$project$DebugParser$parseBytes,
-				$author$project$DebugParser$parseFile
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseRecord(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseArray(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseSet(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseDict(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseList(),
+				$kraklin$elm_debug_parser$DebugParser$parseKeywords,
+				$kraklin$elm_debug_parser$DebugParser$parseCustomTypeWithoutValue,
+				$kraklin$elm_debug_parser$DebugParser$parseNumber,
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithParenthesis(),
+				$kraklin$elm_debug_parser$DebugParser$parseChar,
+				$kraklin$elm_debug_parser$DebugParser$parseString,
+				$kraklin$elm_debug_parser$DebugParser$parseBytes,
+				$kraklin$elm_debug_parser$DebugParser$parseFile
 			]));
 }
-function $author$project$DebugParser$cyclic$parseValue() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue() {
 	return $elm$parser$Parser$oneOf(
 		_List_fromArray(
 			[
-				$author$project$DebugParser$cyclic$parseRecord(),
-				$author$project$DebugParser$cyclic$parseArray(),
-				$author$project$DebugParser$cyclic$parseSet(),
-				$author$project$DebugParser$cyclic$parseDict(),
-				$author$project$DebugParser$cyclic$parseList(),
-				$author$project$DebugParser$parseKeywords,
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseRecord(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseArray(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseSet(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseDict(),
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseList(),
+				$kraklin$elm_debug_parser$DebugParser$parseKeywords,
 				$elm$parser$Parser$lazy(
 				function (_v10) {
-					return $author$project$DebugParser$cyclic$parseCustomType();
+					return $kraklin$elm_debug_parser$DebugParser$cyclic$parseCustomType();
 				}),
-				$author$project$DebugParser$parseCustomTypeWithoutValue,
-				$author$project$DebugParser$parseNumber,
-				$author$project$DebugParser$cyclic$parseValueWithParenthesis(),
-				$author$project$DebugParser$parseChar,
-				$author$project$DebugParser$parseString,
-				$author$project$DebugParser$parseBytes,
-				$author$project$DebugParser$parseFile
+				$kraklin$elm_debug_parser$DebugParser$parseCustomTypeWithoutValue,
+				$kraklin$elm_debug_parser$DebugParser$parseNumber,
+				$kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithParenthesis(),
+				$kraklin$elm_debug_parser$DebugParser$parseChar,
+				$kraklin$elm_debug_parser$DebugParser$parseString,
+				$kraklin$elm_debug_parser$DebugParser$parseBytes,
+				$kraklin$elm_debug_parser$DebugParser$parseFile
 			]));
 }
-function $author$project$DebugParser$cyclic$parseArray() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseArray() {
 	return A2(
 		$elm$parser$Parser$map,
 		function (listVal) {
-			return A3($author$project$Expandable$ElmSequence, 2, false, listVal);
+			return A2(
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+				false,
+				A2($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence, 2, listVal));
 		},
 		$elm$parser$Parser$sequence(
 			{
-				a3: ']',
-				a5: $elm$parser$Parser$lazy(
+				c8: ']',
+				dy: $elm$parser$Parser$lazy(
 					function (_v9) {
-						return $author$project$DebugParser$cyclic$parseValue();
+						return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 					}),
-				bd: ',',
-				be: $elm$parser$Parser$spaces,
-				bf: 'Array.fromList [',
-				bj: 0
+				d2: ',',
+				d7: $elm$parser$Parser$spaces,
+				cE: 'Array.fromList [',
+				eg: 0
 			}));
 }
-function $author$project$DebugParser$cyclic$parseCustomType() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseCustomType() {
 	return A2(
 		$elm$parser$Parser$andThen,
 		function (name) {
 			switch (name) {
 				case 'True':
 					return $elm$parser$Parser$succeed(
-						$author$project$Expandable$ElmBool(true));
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+							$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBool(true)));
 				case 'False':
 					return $elm$parser$Parser$succeed(
-						$author$project$Expandable$ElmBool(false));
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+							$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmBool(false)));
 				case 'NaN':
 					return $elm$parser$Parser$succeed(
-						$author$project$Expandable$ElmFloat(0 / 0));
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+							$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(0 / 0)));
 				case 'Infinity':
 					return $elm$parser$Parser$succeed(
-						$author$project$Expandable$ElmFloat(1 / 0));
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain(
+							$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmNumber(1 / 0)));
 				default:
 					return A2(
 						$elm$parser$Parser$keeper,
 						$elm$parser$Parser$succeed(
 							function (list) {
-								return A3(
-									$author$project$Expandable$ElmType,
+								return A2(
+									$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
 									false,
-									name,
-									$elm$core$List$reverse(list));
+									A2(
+										$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmType,
+										name,
+										$elm$core$List$reverse(list)));
 							}),
-						A2($elm$parser$Parser$loop, _List_Nil, $author$project$DebugParser$typeHelp));
+						A2($elm$parser$Parser$loop, _List_Nil, $kraklin$elm_debug_parser$DebugParser$typeHelp));
 			}
 		},
-		$author$project$DebugParser$parseTypeName);
+		$kraklin$elm_debug_parser$DebugParser$parseTypeName);
 }
-function $author$project$DebugParser$cyclic$parseDict() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseDict() {
 	return A2(
 		$elm$parser$Parser$map,
 		function (listVal) {
-			return A2($author$project$Expandable$ElmDict, false, listVal);
+			return A2(
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+				false,
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmDict(listVal));
 		},
 		$elm$parser$Parser$sequence(
 			{
-				a3: ']',
-				a5: $elm$parser$Parser$lazy(
+				c8: ']',
+				dy: $elm$parser$Parser$lazy(
 					function (_v6) {
 						return A2(
 							$elm$parser$Parser$keeper,
@@ -6866,7 +6974,7 @@ function $author$project$DebugParser$cyclic$parseDict() {
 											$elm$parser$Parser$ignorer,
 											$elm$parser$Parser$lazy(
 												function (_v7) {
-													return $author$project$DebugParser$cyclic$parseValue();
+													return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 												}),
 											$elm$parser$Parser$spaces),
 										$elm$parser$Parser$token(',')),
@@ -6875,45 +6983,51 @@ function $author$project$DebugParser$cyclic$parseDict() {
 								$elm$parser$Parser$ignorer,
 								A2(
 									$elm$parser$Parser$ignorer,
-									$author$project$DebugParser$cyclic$parseValue(),
+									$kraklin$elm_debug_parser$DebugParser$cyclic$parseValue(),
 									$elm$parser$Parser$spaces),
 								$elm$parser$Parser$token(')')));
 					}),
-				bd: ',',
-				be: $elm$parser$Parser$spaces,
-				bf: 'Dict.fromList [',
-				bj: 0
+				d2: ',',
+				d7: $elm$parser$Parser$spaces,
+				cE: 'Dict.fromList [',
+				eg: 0
 			}));
 }
-function $author$project$DebugParser$cyclic$parseList() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseList() {
 	return A2(
 		$elm$parser$Parser$map,
 		function (listVal) {
-			return A3($author$project$Expandable$ElmSequence, 1, false, listVal);
+			return A2(
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+				false,
+				A2($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence, 1, listVal));
 		},
 		$elm$parser$Parser$sequence(
 			{
-				a3: ']',
-				a5: $elm$parser$Parser$lazy(
+				c8: ']',
+				dy: $elm$parser$Parser$lazy(
 					function (_v5) {
-						return $author$project$DebugParser$cyclic$parseValue();
+						return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 					}),
-				bd: ',',
-				be: $elm$parser$Parser$spaces,
-				bf: '[',
-				bj: 0
+				d2: ',',
+				d7: $elm$parser$Parser$spaces,
+				cE: '[',
+				eg: 0
 			}));
 }
-function $author$project$DebugParser$cyclic$parseRecord() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseRecord() {
 	return A2(
 		$elm$parser$Parser$map,
 		function (listVal) {
-			return A2($author$project$Expandable$ElmRecord, false, listVal);
+			return A2(
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+				false,
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmRecord(listVal));
 		},
 		$elm$parser$Parser$sequence(
 			{
-				a3: '}',
-				a5: $elm$parser$Parser$lazy(
+				c8: '}',
+				dy: $elm$parser$Parser$lazy(
 					function (_v4) {
 						return A2(
 							$elm$parser$Parser$keeper,
@@ -6922,36 +7036,39 @@ function $author$project$DebugParser$cyclic$parseRecord() {
 								$elm$parser$Parser$succeed($elm$core$Tuple$pair),
 								A2(
 									$elm$parser$Parser$ignorer,
-									$author$project$DebugParser$parseVariableName,
+									$kraklin$elm_debug_parser$DebugParser$parseVariableName,
 									$elm$parser$Parser$token(' = '))),
-							$author$project$DebugParser$cyclic$parseValue());
+							$kraklin$elm_debug_parser$DebugParser$cyclic$parseValue());
 					}),
-				bd: ',',
-				be: $elm$parser$Parser$spaces,
-				bf: '{',
-				bj: 0
+				d2: ',',
+				d7: $elm$parser$Parser$spaces,
+				cE: '{',
+				eg: 0
 			}));
 }
-function $author$project$DebugParser$cyclic$parseSet() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseSet() {
 	return A2(
 		$elm$parser$Parser$map,
 		function (listVal) {
-			return A3($author$project$Expandable$ElmSequence, 0, false, listVal);
+			return A2(
+				$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+				false,
+				A2($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence, 0, listVal));
 		},
 		$elm$parser$Parser$sequence(
 			{
-				a3: ']',
-				a5: $elm$parser$Parser$lazy(
+				c8: ']',
+				dy: $elm$parser$Parser$lazy(
 					function (_v3) {
-						return $author$project$DebugParser$cyclic$parseValue();
+						return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 					}),
-				bd: ',',
-				be: $elm$parser$Parser$spaces,
-				bf: 'Set.fromList [',
-				bj: 0
+				d2: ',',
+				d7: $elm$parser$Parser$spaces,
+				cE: 'Set.fromList [',
+				eg: 0
 			}));
 }
-function $author$project$DebugParser$cyclic$parseValueWithParenthesis() {
+function $kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithParenthesis() {
 	return A2(
 		$elm$parser$Parser$keeper,
 		A2(
@@ -6982,10 +7099,13 @@ function $author$project$DebugParser$cyclic$parseValueWithParenthesis() {
 															$elm$parser$Parser$map,
 															function (rdValue) {
 																return A2(
-																	$author$project$Expandable$ElmTuple,
+																	$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
 																	false,
-																	_List_fromArray(
-																		[fstValue, sndValue, rdValue]));
+																	A2(
+																		$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence,
+																		3,
+																		_List_fromArray(
+																			[fstValue, sndValue, rdValue])));
 															},
 															A2(
 																$elm$parser$Parser$keeper,
@@ -7001,14 +7121,17 @@ function $author$project$DebugParser$cyclic$parseValueWithParenthesis() {
 																	$elm$parser$Parser$spaces),
 																$elm$parser$Parser$lazy(
 																	function (_v2) {
-																		return $author$project$DebugParser$cyclic$parseValue();
+																		return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 																	}))),
 															$elm$parser$Parser$succeed(
 															A2(
-																$author$project$Expandable$ElmTuple,
+																$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
 																false,
-																_List_fromArray(
-																	[fstValue, sndValue])))
+																A2(
+																	$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence,
+																	3,
+																	_List_fromArray(
+																		[fstValue, sndValue]))))
 														])));
 										},
 										A2(
@@ -7025,7 +7148,7 @@ function $author$project$DebugParser$cyclic$parseValueWithParenthesis() {
 												$elm$parser$Parser$spaces),
 											$elm$parser$Parser$lazy(
 												function (_v1) {
-													return $author$project$DebugParser$cyclic$parseValue();
+													return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 												}))),
 										$elm$parser$Parser$succeed(fstValue)
 									]));
@@ -7038,54 +7161,55 @@ function $author$project$DebugParser$cyclic$parseValueWithParenthesis() {
 								$elm$parser$Parser$spaces),
 							$elm$parser$Parser$lazy(
 								function (_v0) {
-									return $author$project$DebugParser$cyclic$parseValue();
+									return $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
 								}))),
-						$elm$parser$Parser$succeed($author$project$Expandable$ElmUnit)
+						$elm$parser$Parser$succeed(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Plain($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmUnit))
 					])),
 			$elm$parser$Parser$token(')')));
 }
-var $author$project$DebugParser$parseValueWithoutCustomType = $author$project$DebugParser$cyclic$parseValueWithoutCustomType();
-$author$project$DebugParser$cyclic$parseValueWithoutCustomType = function () {
-	return $author$project$DebugParser$parseValueWithoutCustomType;
+var $kraklin$elm_debug_parser$DebugParser$parseValueWithoutCustomType = $kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithoutCustomType();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithoutCustomType = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseValueWithoutCustomType;
 };
-var $author$project$DebugParser$parseValue = $author$project$DebugParser$cyclic$parseValue();
-$author$project$DebugParser$cyclic$parseValue = function () {
-	return $author$project$DebugParser$parseValue;
+var $kraklin$elm_debug_parser$DebugParser$parseValue = $kraklin$elm_debug_parser$DebugParser$cyclic$parseValue();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseValue = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseValue;
 };
-var $author$project$DebugParser$parseArray = $author$project$DebugParser$cyclic$parseArray();
-$author$project$DebugParser$cyclic$parseArray = function () {
-	return $author$project$DebugParser$parseArray;
+var $kraklin$elm_debug_parser$DebugParser$parseArray = $kraklin$elm_debug_parser$DebugParser$cyclic$parseArray();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseArray = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseArray;
 };
-var $author$project$DebugParser$parseCustomType = $author$project$DebugParser$cyclic$parseCustomType();
-$author$project$DebugParser$cyclic$parseCustomType = function () {
-	return $author$project$DebugParser$parseCustomType;
+var $kraklin$elm_debug_parser$DebugParser$parseCustomType = $kraklin$elm_debug_parser$DebugParser$cyclic$parseCustomType();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseCustomType = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseCustomType;
 };
-var $author$project$DebugParser$parseDict = $author$project$DebugParser$cyclic$parseDict();
-$author$project$DebugParser$cyclic$parseDict = function () {
-	return $author$project$DebugParser$parseDict;
+var $kraklin$elm_debug_parser$DebugParser$parseDict = $kraklin$elm_debug_parser$DebugParser$cyclic$parseDict();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseDict = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseDict;
 };
-var $author$project$DebugParser$parseList = $author$project$DebugParser$cyclic$parseList();
-$author$project$DebugParser$cyclic$parseList = function () {
-	return $author$project$DebugParser$parseList;
+var $kraklin$elm_debug_parser$DebugParser$parseList = $kraklin$elm_debug_parser$DebugParser$cyclic$parseList();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseList = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseList;
 };
-var $author$project$DebugParser$parseRecord = $author$project$DebugParser$cyclic$parseRecord();
-$author$project$DebugParser$cyclic$parseRecord = function () {
-	return $author$project$DebugParser$parseRecord;
+var $kraklin$elm_debug_parser$DebugParser$parseRecord = $kraklin$elm_debug_parser$DebugParser$cyclic$parseRecord();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseRecord = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseRecord;
 };
-var $author$project$DebugParser$parseSet = $author$project$DebugParser$cyclic$parseSet();
-$author$project$DebugParser$cyclic$parseSet = function () {
-	return $author$project$DebugParser$parseSet;
+var $kraklin$elm_debug_parser$DebugParser$parseSet = $kraklin$elm_debug_parser$DebugParser$cyclic$parseSet();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseSet = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseSet;
 };
-var $author$project$DebugParser$parseValueWithParenthesis = $author$project$DebugParser$cyclic$parseValueWithParenthesis();
-$author$project$DebugParser$cyclic$parseValueWithParenthesis = function () {
-	return $author$project$DebugParser$parseValueWithParenthesis;
+var $kraklin$elm_debug_parser$DebugParser$parseValueWithParenthesis = $kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithParenthesis();
+$kraklin$elm_debug_parser$DebugParser$cyclic$parseValueWithParenthesis = function () {
+	return $kraklin$elm_debug_parser$DebugParser$parseValueWithParenthesis;
 };
 var $elm$parser$Parser$DeadEnd = F3(
 	function (row, col, problem) {
-		return {ez: col, fB: problem, fG: row};
+		return {aV: col, a8: problem, a9: row};
 	});
 var $elm$parser$Parser$problemToDeadEnd = function (p) {
-	return A3($elm$parser$Parser$DeadEnd, p.fG, p.ez, p.fB);
+	return A3($elm$parser$Parser$DeadEnd, p.a9, p.aV, p.a8);
 };
 var $elm$parser$Parser$Advanced$bagToList = F2(
 	function (bag, list) {
@@ -7117,7 +7241,7 @@ var $elm$parser$Parser$Advanced$run = F2(
 	function (_v0, src) {
 		var parse = _v0;
 		var _v1 = parse(
-			{ez: 1, g: _List_Nil, h: 1, b: 0, fG: 1, a: src});
+			{aV: 1, d: _List_Nil, j: 1, c: 0, a9: 1, b: src});
 		if (!_v1.$) {
 			var value = _v1.b;
 			return $elm$core$Result$Ok(value);
@@ -7140,39 +7264,36 @@ var $elm$parser$Parser$run = F2(
 		}
 	});
 var $elm$core$String$trim = _String_trim;
-var $author$project$DebugParser$parse = function (stringToParse) {
+var $kraklin$elm_debug_parser$DebugParser$parse = function (stringToParse) {
 	return A2(
 		$elm$core$Result$mapError,
-		$author$project$DebugParser$deadEndsToString,
+		$kraklin$elm_debug_parser$DebugParser$deadEndsToString,
 		A2(
 			$elm$parser$Parser$run,
 			A2(
 				$elm$parser$Parser$keeper,
 				A2(
 					$elm$parser$Parser$keeper,
-					$elm$parser$Parser$succeed($author$project$DebugParser$ParsedLog),
+					$elm$parser$Parser$succeed($kraklin$elm_debug_parser$DebugParser$ParsedLog),
 					A2(
 						$elm$parser$Parser$ignorer,
 						$elm$parser$Parser$getChompedString(
 							$elm$parser$Parser$chompUntil(': ')),
 						$elm$parser$Parser$token(': '))),
-				A2($elm$parser$Parser$ignorer, $author$project$DebugParser$parseValue, $elm$parser$Parser$end)),
+				A2($elm$parser$Parser$ignorer, $kraklin$elm_debug_parser$DebugParser$parseValue, $elm$parser$Parser$end)),
 			$elm$core$String$trim(stringToParse)));
 };
-var $author$project$DebugMessages$init = {ah: $author$project$DebugParser$parse, J: _List_Nil, Q: $elm$core$Dict$empty};
+var $author$project$DebugMessages$init = $author$project$DebugMessages$initWithCustomParser($kraklin$elm_debug_parser$DebugParser$parse);
 var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
 var $author$project$Panel$init = function (flags) {
 	return _Utils_Tuple2(
-		{aJ: '', b1: flags, fc: $author$project$DebugMessages$init, bU: $elm$time$Time$utc},
+		{a_: '', ck: flags, fP: $author$project$DebugMessages$init, Y: true, cb: $elm$time$Time$utc},
 		A2($elm$core$Task$perform, $author$project$Panel$GetZone, $elm$time$Time$here));
 };
-var $author$project$DebugMessages$initWithCustomParser = function (parseFn) {
-	return {ah: parseFn, J: _List_Nil, Q: $elm$core$Dict$empty};
-};
-var $author$project$DebugParser$parseWithOptionalTag = function (stringToParse) {
+var $kraklin$elm_debug_parser$DebugParser$parseWithOptionalTag = function (stringToParse) {
 	return A2(
 		$elm$core$Result$mapError,
-		$author$project$DebugParser$deadEndsToString,
+		$kraklin$elm_debug_parser$DebugParser$deadEndsToString,
 		A2(
 			$elm$parser$Parser$run,
 			$elm$parser$Parser$oneOf(
@@ -7183,18 +7304,18 @@ var $author$project$DebugParser$parseWithOptionalTag = function (stringToParse) 
 							$elm$parser$Parser$keeper,
 							A2(
 								$elm$parser$Parser$keeper,
-								$elm$parser$Parser$succeed($author$project$DebugParser$ParsedLog),
+								$elm$parser$Parser$succeed($kraklin$elm_debug_parser$DebugParser$ParsedLog),
 								A2(
 									$elm$parser$Parser$ignorer,
 									$elm$parser$Parser$getChompedString(
 										$elm$parser$Parser$chompUntil(': ')),
 									$elm$parser$Parser$token(': '))),
-							A2($elm$parser$Parser$ignorer, $author$project$DebugParser$parseValue, $elm$parser$Parser$end))),
+							A2($elm$parser$Parser$ignorer, $kraklin$elm_debug_parser$DebugParser$parseValue, $elm$parser$Parser$end))),
 						A2(
 						$elm$parser$Parser$keeper,
 						$elm$parser$Parser$succeed(
-							$author$project$DebugParser$ParsedLog('Debug message')),
-						A2($elm$parser$Parser$ignorer, $author$project$DebugParser$parseValue, $elm$parser$Parser$end))
+							$kraklin$elm_debug_parser$DebugParser$ParsedLog('Debug message')),
+						A2($elm$parser$Parser$ignorer, $kraklin$elm_debug_parser$DebugParser$parseValue, $elm$parser$Parser$end))
 					])),
 			$elm$core$String$trim(stringToParse)));
 };
@@ -7203,12 +7324,12 @@ var $author$project$Main$init = function (_v0) {
 		return _Utils_update(
 			m,
 			{
-				fc: $author$project$DebugMessages$initWithCustomParser($author$project$DebugParser$parseWithOptionalTag)
+				fP: $author$project$DebugMessages$initWithCustomParser($kraklin$elm_debug_parser$DebugParser$parseWithOptionalTag)
 			});
 	}(
 		$author$project$Panel$init($author$project$Panel$defaultFlags).a);
 	return _Utils_Tuple2(
-		{ar: '', a6: $elm$core$Maybe$Nothing, av: panelModel, bU: $elm$time$Time$utc},
+		{aF: '', bs: $elm$core$Maybe$Nothing, aJ: panelModel, cb: $elm$time$Time$utc},
 		A2($elm$core$Task$perform, $author$project$Main$GetZone, $elm$time$Time$here));
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
@@ -7216,8 +7337,14 @@ var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$subscriptions = function (_v0) {
 	return $elm$core$Platform$Sub$none;
 };
+var $author$project$Main$AddMultipleMessages = function (a) {
+	return {$: 7, a: a};
+};
+var $author$project$Panel$BulkLogReceived = function (a) {
+	return {$: 2, a: a};
+};
 var $author$project$Panel$LogReceived = function (a) {
-	return {$: 0, a: a};
+	return {$: 1, a: a};
 };
 var $author$project$Main$PanelMsg = function (a) {
 	return {$: 2, a: a};
@@ -7225,11 +7352,6 @@ var $author$project$Main$PanelMsg = function (a) {
 var $author$project$Main$ParseInput = function (a) {
 	return {$: 3, a: a};
 };
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromMonth = function (month) {
 	switch (month) {
 		case 0:
@@ -7275,8 +7397,8 @@ var $elm$time$Time$toAdjustedMinutesHelp = F3(
 			} else {
 				var era = eras.a;
 				var olderEras = eras.b;
-				if (_Utils_cmp(era.bf, posixMinutes) < 0) {
-					return posixMinutes + era.b;
+				if (_Utils_cmp(era.cE, posixMinutes) < 0) {
+					return posixMinutes + era.c;
 				} else {
 					var $temp$defaultOffset = defaultOffset,
 						$temp$posixMinutes = posixMinutes,
@@ -7313,15 +7435,15 @@ var $elm$time$Time$toCivil = function (minutes) {
 	var month = mp + ((mp < 10) ? 3 : (-9));
 	var year = yearOfEra + (era * 400);
 	return {
-		cK: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
-		de: month,
-		dY: year + ((month <= 2) ? 1 : 0)
+		c4: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		dF: month,
+		et: year + ((month <= 2) ? 1 : 0)
 	};
 };
 var $elm$time$Time$toDay = F2(
 	function (zone, time) {
 		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).cK;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).c4;
 	});
 var $elm$core$Basics$modBy = _Basics_modBy;
 var $elm$time$Time$toHour = F2(
@@ -7363,7 +7485,7 @@ var $elm$time$Time$Sep = 8;
 var $elm$time$Time$toMonth = F2(
 	function (zone, time) {
 		var _v0 = $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).de;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).dF;
 		switch (_v0) {
 			case 1:
 				return 0;
@@ -7435,7 +7557,7 @@ var $elm$time$Time$toSecond = F2(
 var $elm$time$Time$toYear = F2(
 	function (zone, time) {
 		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).dY;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).et;
 	});
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime = function (time) {
 	return A2(
@@ -7462,19 +7584,195 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime = function (time) {
 		3,
 		A2($elm$time$Time$toMillis, $elm$time$Time$utc, time)) + 'Z'))))))))))));
 };
-var $elm$core$Platform$Cmd$map = _Platform_map;
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$random$Random$Generate = $elm$core$Basics$identity;
+var $elm$random$Random$Seed = F2(
+	function (a, b) {
+		return {$: 0, a: a, b: b};
+	});
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$random$Random$next = function (_v0) {
+	var state0 = _v0.a;
+	var incr = _v0.b;
+	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
+};
+var $elm$random$Random$initialSeed = function (x) {
+	var _v0 = $elm$random$Random$next(
+		A2($elm$random$Random$Seed, 0, 1013904223));
+	var state1 = _v0.a;
+	var incr = _v0.b;
+	var state2 = (state1 + x) >>> 0;
+	return $elm$random$Random$next(
+		A2($elm$random$Random$Seed, state2, incr));
+};
 var $elm$time$Time$Posix = $elm$core$Basics$identity;
 var $elm$time$Time$millisToPosix = $elm$core$Basics$identity;
 var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
-var $author$project$Main$sampleData = 'Debug model: { array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], binaryTree = Node (Node (Leaf None) (Leaf None)) (Node (Leaf None) (Leaf None)), bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), custom = Complex [(1,Some \"text\" 1),(2,Recursive (Complex [])),(3,None),(4,With_Underscore1)], customRecord = WithRecord [{ age = 21, name = \"Joe\" }], dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, list = [Nothing,Just [\"String\"],Nothing,Nothing], listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }';
+var $elm$random$Random$init = A2(
+	$elm$core$Task$andThen,
+	function (time) {
+		return $elm$core$Task$succeed(
+			$elm$random$Random$initialSeed(
+				$elm$time$Time$posixToMillis(time)));
+	},
+	$elm$time$Time$now);
+var $elm$random$Random$step = F2(
+	function (_v0, seed) {
+		var generator = _v0;
+		return generator(seed);
+	});
+var $elm$random$Random$onEffects = F3(
+	function (router, commands, seed) {
+		if (!commands.b) {
+			return $elm$core$Task$succeed(seed);
+		} else {
+			var generator = commands.a;
+			var rest = commands.b;
+			var _v1 = A2($elm$random$Random$step, generator, seed);
+			var value = _v1.a;
+			var newSeed = _v1.b;
+			return A2(
+				$elm$core$Task$andThen,
+				function (_v2) {
+					return A3($elm$random$Random$onEffects, router, rest, newSeed);
+				},
+				A2($elm$core$Platform$sendToApp, router, value));
+		}
+	});
+var $elm$random$Random$onSelfMsg = F3(
+	function (_v0, _v1, seed) {
+		return $elm$core$Task$succeed(seed);
+	});
+var $elm$random$Random$Generator = $elm$core$Basics$identity;
+var $elm$random$Random$map = F2(
+	function (func, _v0) {
+		var genA = _v0;
+		return function (seed0) {
+			var _v1 = genA(seed0);
+			var a = _v1.a;
+			var seed1 = _v1.b;
+			return _Utils_Tuple2(
+				func(a),
+				seed1);
+		};
+	});
+var $elm$random$Random$cmdMap = F2(
+	function (func, _v0) {
+		var generator = _v0;
+		return A2($elm$random$Random$map, func, generator);
+	});
+_Platform_effectManagers['Random'] = _Platform_createManager($elm$random$Random$init, $elm$random$Random$onEffects, $elm$random$Random$onSelfMsg, $elm$random$Random$cmdMap);
+var $elm$random$Random$command = _Platform_leaf('Random');
+var $elm$random$Random$generate = F2(
+	function (tagger, generator) {
+		return $elm$random$Random$command(
+			A2($elm$random$Random$map, tagger, generator));
+	});
+var $elm$core$Bitwise$xor = _Bitwise_xor;
+var $elm$random$Random$peel = function (_v0) {
+	var state = _v0.a;
+	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
+	return ((word >>> 22) ^ word) >>> 0;
+};
+var $elm$random$Random$int = F2(
+	function (a, b) {
+		return function (seed0) {
+			var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
+			var lo = _v0.a;
+			var hi = _v0.b;
+			var range = (hi - lo) + 1;
+			if (!((range - 1) & range)) {
+				return _Utils_Tuple2(
+					(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
+					$elm$random$Random$next(seed0));
+			} else {
+				var threshhold = (((-range) >>> 0) % range) >>> 0;
+				var accountForBias = function (seed) {
+					accountForBias:
+					while (true) {
+						var x = $elm$random$Random$peel(seed);
+						var seedN = $elm$random$Random$next(seed);
+						if (_Utils_cmp(x, threshhold) < 0) {
+							var $temp$seed = seedN;
+							seed = $temp$seed;
+							continue accountForBias;
+						} else {
+							return _Utils_Tuple2((x % range) + lo, seedN);
+						}
+					}
+				};
+				return accountForBias(seed0);
+			}
+		};
+	});
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(0),
+				entries));
+	});
+var $elm$random$Random$listHelp = F4(
+	function (revList, n, gen, seed) {
+		listHelp:
+		while (true) {
+			if (n < 1) {
+				return _Utils_Tuple2(revList, seed);
+			} else {
+				var _v0 = gen(seed);
+				var value = _v0.a;
+				var newSeed = _v0.b;
+				var $temp$revList = A2($elm$core$List$cons, value, revList),
+					$temp$n = n - 1,
+					$temp$gen = gen,
+					$temp$seed = newSeed;
+				revList = $temp$revList;
+				n = $temp$n;
+				gen = $temp$gen;
+				seed = $temp$seed;
+				continue listHelp;
+			}
+		}
+	});
+var $elm$random$Random$list = F2(
+	function (n, _v0) {
+		var gen = _v0;
+		return function (seed) {
+			return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
+		};
+	});
+var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(0),
+			pairs));
+};
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
+var $author$project$Main$sampleData = 'Debug model: { random = \"<VALUE>\", array = Array.fromList [1,2,3,4,5678,3464637,893145,-29], binaryTree = Node (Node (Leaf None) (Leaf None)) (Node (Leaf None) (Leaf None)), bools = (True,False), complexTuple = (1,(\"longer string\",(\"much longer string\",1))), custom = Complex [(1,Some \"text\" 1),(2,Recursive (Complex [])),(3,None),(4,With_Underscore1)], customRecord = WithRecord [{ age = 21, name = \"Joe\" }], dict = Dict.fromList [(1,\"a\"),(2,\"b\"),(234,\"String longer than one char\")], dictWithTuples = Dict.fromList [((0,\"b\",1),\"a\"),((0,\"c\",1),\"b\"),((4,\"d\",1),\"String longer than one char\")], float = 123.56, function = <function>, int = 123, list = [Nothing,Just [\"String\"],Nothing,Nothing], listOfLists = [[[\"a\",\"b\"],[\"c\",\"d\"]],[[\"e\",\"f\"],[\"g\",\"h\"]]], listSingleton = [\"Singleton\"], nonEmptyList = (1,[]), set = Set.fromList [\"Some really long string with some nonsense\",\"a\",\"b\"], string = \"Some string\", triplet = (1,\"b\",1), tuple = (1,2), unit = () }';
+var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$DebugMessages$AddMessageData = F2(
 	function (timestamp, log) {
-		return {bG: log, aY: timestamp};
+		return {bW: log, be: timestamp};
 	});
 var $author$project$Panel$ParsingError = function (a) {
-	return {$: 4, a: a};
+	return {$: 5, a: a};
 };
 var $author$project$DebugMessages$hashFromKey = $elm$core$Tuple$first;
 var $elm$core$Dict$Black = 1;
@@ -7607,12 +7905,11 @@ var $elm$core$Tuple$mapSecond = F2(
 	});
 var $robinheghan$murmur3$Murmur3$HashData = F4(
 	function (shift, seed, hash, charsProcessed) {
-		return {aF: charsProcessed, b5: hash, F: seed, aS: shift};
+		return {U: charsProcessed, cq: hash, d1: seed, aa: shift};
 	});
 var $robinheghan$murmur3$Murmur3$c1 = 3432918353;
 var $robinheghan$murmur3$Murmur3$c2 = 461845907;
 var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
-var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
 var $robinheghan$murmur3$Murmur3$multiplyBy = F2(
 	function (b, a) {
 		return ((a & 65535) * b) + ((((a >>> 16) * b) & 65535) << 16);
@@ -7622,16 +7919,15 @@ var $robinheghan$murmur3$Murmur3$rotlBy = F2(
 	function (b, a) {
 		return (a << b) | (a >>> (32 - b));
 	});
-var $elm$core$Bitwise$xor = _Bitwise_xor;
 var $robinheghan$murmur3$Murmur3$finalize = function (data) {
-	var acc = (!(!data.b5)) ? (data.F ^ A2(
+	var acc = (!(!data.cq)) ? (data.d1 ^ A2(
 		$robinheghan$murmur3$Murmur3$multiplyBy,
 		$robinheghan$murmur3$Murmur3$c2,
 		A2(
 			$robinheghan$murmur3$Murmur3$rotlBy,
 			15,
-			A2($robinheghan$murmur3$Murmur3$multiplyBy, $robinheghan$murmur3$Murmur3$c1, data.b5)))) : data.F;
-	var h0 = acc ^ data.aF;
+			A2($robinheghan$murmur3$Murmur3$multiplyBy, $robinheghan$murmur3$Murmur3$c1, data.cq)))) : data.d1;
+	var h0 = acc ^ data.U;
 	var h1 = A2($robinheghan$murmur3$Murmur3$multiplyBy, 2246822507, h0 ^ (h0 >>> 16));
 	var h2 = A2($robinheghan$murmur3$Murmur3$multiplyBy, 3266489909, h1 ^ (h1 >>> 13));
 	return (h2 ^ (h2 >>> 16)) >>> 0;
@@ -7654,17 +7950,17 @@ var $robinheghan$murmur3$Murmur3$mix = F2(
 	});
 var $robinheghan$murmur3$Murmur3$hashFold = F2(
 	function (c, data) {
-		var res = data.b5 | ((255 & $elm$core$Char$toCode(c)) << data.aS);
-		var _v0 = data.aS;
+		var res = data.cq | ((255 & $elm$core$Char$toCode(c)) << data.aa);
+		var _v0 = data.aa;
 		if (_v0 === 24) {
 			return {
-				aF: data.aF + 1,
-				b5: 0,
-				F: A2($robinheghan$murmur3$Murmur3$mix, data.F, res),
-				aS: 0
+				U: data.U + 1,
+				cq: 0,
+				d1: A2($robinheghan$murmur3$Murmur3$mix, data.d1, res),
+				aa: 0
 			};
 		} else {
-			return {aF: data.aF + 1, b5: res, F: data.F, aS: data.aS + 8};
+			return {U: data.U + 1, cq: res, d1: data.d1, aa: data.aa + 8};
 		}
 	});
 var $robinheghan$murmur3$Murmur3$hashString = F2(
@@ -7677,7 +7973,7 @@ var $robinheghan$murmur3$Murmur3$hashString = F2(
 				str));
 	});
 var $author$project$DebugMessages$messageHash = function (input) {
-	return A2($robinheghan$murmur3$Murmur3$hashString, 8532, input);
+	return A2($robinheghan$murmur3$Murmur3$hashString, 8537, input);
 };
 var $author$project$DebugMessages$toKey = F2(
 	function (hash, time) {
@@ -7838,12 +8134,11 @@ var $elm_community$list_extra$List$Extra$updateAt = F3(
 			return list;
 		} else {
 			var tail = A2($elm$core$List$drop, index, list);
-			var head = A2($elm$core$List$take, index, list);
 			if (tail.b) {
 				var x = tail.a;
 				var xs = tail.b;
 				return _Utils_ap(
-					head,
+					A2($elm$core$List$take, index, list),
 					A2(
 						$elm$core$List$cons,
 						fn(x),
@@ -7855,13 +8150,17 @@ var $elm_community$list_extra$List$Extra$updateAt = F3(
 	});
 var $author$project$DebugMessages$add = F2(
 	function (_v0, _v1) {
-		var timestamp = _v0.aY;
-		var log = _v0.bG;
+		var timestamp = _v0.be;
+		var log = _v0.bW;
 		var data = _v1;
+		var lastHoldOnHash = A2(
+			$elm$core$Maybe$map,
+			A2($elm$core$Basics$composeR, $elm$core$Tuple$first, $author$project$DebugMessages$hashFromKey),
+			$elm$core$List$head(data.C));
 		var lastHash = A2(
 			$elm$core$Maybe$map,
 			A2($elm$core$Basics$composeR, $elm$core$Tuple$first, $author$project$DebugMessages$hashFromKey),
-			$elm$core$List$head(data.J));
+			$elm$core$List$head(data.D));
 		var increaseLastCount = function (queue) {
 			return A3(
 				$elm_community$list_extra$List$Extra$updateAt,
@@ -7874,32 +8173,59 @@ var $author$project$DebugMessages$add = F2(
 		};
 		var hash = $author$project$DebugMessages$messageHash(log);
 		var dictKey = A2($author$project$DebugMessages$toKey, hash, timestamp);
-		return _Utils_eq(
+		return data.aq ? (_Utils_eq(
+			lastHoldOnHash,
+			$elm$core$Maybe$Just(hash)) ? $elm$core$Result$Ok(
+			_Utils_update(
+				data,
+				{
+					C: increaseLastCount(data.C)
+				})) : A2(
+			$elm$core$Result$map,
+			function (_v2) {
+				var tag = _v2.O;
+				var value = _v2.E;
+				return _Utils_update(
+					data,
+					{
+						C: A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(dictKey, 1),
+							data.C),
+						N: A3(
+							$elm$core$Dict$insert,
+							dictKey,
+							{O: tag, E: value},
+							data.N)
+					});
+			},
+			data.a7(log))) : (_Utils_eq(
 			lastHash,
 			$elm$core$Maybe$Just(hash)) ? $elm$core$Result$Ok(
 			_Utils_update(
 				data,
 				{
-					J: increaseLastCount(data.J)
+					D: increaseLastCount(data.D)
 				})) : A2(
 			$elm$core$Result$map,
-			function (_v2) {
-				var tag = _v2.R;
-				var value = _v2.H;
-				return {
-					ah: data.ah,
-					J: A2(
-						$elm$core$List$cons,
-						_Utils_Tuple2(dictKey, 1),
-						data.J),
-					Q: A3(
-						$elm$core$Dict$insert,
-						dictKey,
-						{R: tag, H: value},
-						data.Q)
-				};
+			function (_v3) {
+				var tag = _v3.O;
+				var value = _v3.E;
+				return _Utils_update(
+					data,
+					{
+						D: A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(dictKey, 1),
+							data.D),
+						N: A3(
+							$elm$core$Dict$insert,
+							dictKey,
+							{O: tag, E: value},
+							data.N)
+					});
 			},
-			data.ah(log));
+			data.a7(log)));
 	});
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$core$List$maybeCons = F3(
@@ -7996,90 +8322,151 @@ var $author$project$DebugMessages$bulkAdd = F2(
 		var data = _v0;
 		var parsedMessages = A2(
 			$elm$core$List$filterMap,
-			$elm$core$Basics$identity,
+			function (_v4) {
+				var _v5 = _v4.a;
+				var hash = _v5.a;
+				var log = _v5.b.bW;
+				var timestamp = _v5.b.be;
+				var count = _v4.b;
+				var _v6 = data.a7(log);
+				if (!_v6.$) {
+					var tag = _v6.a.O;
+					var value = _v6.a.E;
+					return $elm$core$Maybe$Just(
+						{bN: count, cq: hash, O: tag, be: timestamp, E: value});
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			},
 			A2(
 				$elm$core$List$map,
-				function (_v4) {
-					var _v5 = _v4.a;
-					var hash = _v5.a;
-					var log = _v5.b.bG;
-					var timestamp = _v5.b.aY;
-					var count = _v4.b;
-					var _v6 = data.ah(log);
-					if (!_v6.$) {
-						var tag = _v6.a.R;
-						var value = _v6.a.H;
-						return $elm$core$Maybe$Just(
-							{bx: count, b5: hash, R: tag, aY: timestamp, H: value});
-					} else {
-						return $elm$core$Maybe$Nothing;
-					}
+				function (_v3) {
+					var v = _v3.a;
+					var list = _v3.b;
+					return _Utils_Tuple2(
+						v,
+						$elm$core$List$length(list) + 1);
 				},
 				A2(
-					$elm$core$List$map,
-					function (_v3) {
-						var v = _v3.a;
-						var list = _v3.b;
-						return _Utils_Tuple2(
-							v,
-							$elm$core$List$length(list) + 1);
-					},
+					$elm_community$list_extra$List$Extra$groupWhile,
+					F2(
+						function (v1, v2) {
+							return _Utils_eq(v1.a, v2.a);
+						}),
 					A2(
-						$elm_community$list_extra$List$Extra$groupWhile,
-						F2(
-							function (v1, v2) {
-								return _Utils_eq(v1.a, v2.a);
-							}),
-						A2(
-							$elm$core$List$map,
-							function (messageData) {
-								return _Utils_Tuple2(
-									$author$project$DebugMessages$messageHash(messageData.bG),
-									messageData);
-							},
-							bulkList)))));
+						$elm$core$List$map,
+						function (messageData) {
+							return _Utils_Tuple2(
+								$author$project$DebugMessages$messageHash(messageData.bW),
+								messageData);
+						},
+						bulkList))));
 		var newStore = A2(
 			$elm$core$Dict$union,
-			data.Q,
+			data.N,
 			$elm$core$Dict$fromList(
 				A2(
 					$elm$core$List$map,
 					function (_v2) {
-						var tag = _v2.R;
-						var value = _v2.H;
-						var hash = _v2.b5;
-						var timestamp = _v2.aY;
+						var tag = _v2.O;
+						var value = _v2.E;
+						var hash = _v2.cq;
+						var timestamp = _v2.be;
 						return _Utils_Tuple2(
 							A2($author$project$DebugMessages$toKey, hash, timestamp),
-							{R: tag, H: value});
+							{O: tag, E: value});
 					},
 					parsedMessages)));
 		var newQueue = A2(
 			$elm$core$List$map,
 			function (_v1) {
-				var hash = _v1.b5;
-				var timestamp = _v1.aY;
-				var count = _v1.bx;
+				var hash = _v1.cq;
+				var timestamp = _v1.be;
+				var count = _v1.bN;
 				return _Utils_Tuple2(
 					A2($author$project$DebugMessages$toKey, hash, timestamp),
 					count);
 			},
 			parsedMessages);
-		return _Utils_update(
+		return data.aq ? _Utils_update(
 			data,
 			{
-				J: _Utils_ap(newQueue, data.J),
-				Q: newStore
+				C: _Utils_ap(newQueue, data.C),
+				N: newStore
+			}) : _Utils_update(
+			data,
+			{
+				D: _Utils_ap(newQueue, data.D),
+				N: newStore
 			});
 	});
 var $author$project$DebugMessages$clear = function (_v0) {
-	var parseFn = _v0.ah;
-	return {ah: parseFn, J: _List_Nil, Q: $elm$core$Dict$empty};
+	var parseFn = _v0.a7;
+	var holdOn = _v0.aq;
+	return {aq: holdOn, C: _List_Nil, a7: parseFn, D: _List_Nil, N: $elm$core$Dict$empty};
 };
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$json$Json$Decode$field = _Json_decodeField;
+var $author$project$Panel$NoOp = {$: 0};
+var $elm$core$Task$onError = _Scheduler_onError;
+var $elm$core$Task$attempt = F2(
+	function (resultToMessage, task) {
+		return $elm$core$Task$command(
+			A2(
+				$elm$core$Task$onError,
+				A2(
+					$elm$core$Basics$composeL,
+					A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+					$elm$core$Result$Err),
+				A2(
+					$elm$core$Task$andThen,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+						$elm$core$Result$Ok),
+					task)));
+	});
+var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
+var $author$project$Panel$messagesDivId = 'debug-messages';
+var $elm$browser$Browser$Dom$setViewportOf = _Browser_setViewportOf;
+var $author$project$Panel$jumpToTheBottom = A2(
+	$elm$core$Task$attempt,
+	function (_v0) {
+		return $author$project$Panel$NoOp;
+	},
+	A2(
+		$elm$core$Task$andThen,
+		function (info) {
+			return A3($elm$browser$Browser$Dom$setViewportOf, $author$project$Panel$messagesDivId, 0, info.gl.fr);
+		},
+		$elm$browser$Browser$Dom$getViewportOf($author$project$Panel$messagesDivId)));
 var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$DebugMessages$mergeHoldOnQueue = function (_v0) {
+	var data = _v0;
+	return _Utils_update(
+		data,
+		{
+			C: _List_Nil,
+			D: _Utils_ap(data.C, data.D)
+		});
+};
+var $author$project$DebugMessages$setHoldOff = function (_v0) {
+	var data = _v0;
+	return _Utils_update(
+		data,
+		{
+			aq: false,
+			C: _List_Nil,
+			D: _Utils_ap(data.D, data.C)
+		});
+};
+var $author$project$DebugMessages$setHoldOn = function (_v0) {
+	var data = _v0;
+	return _Utils_update(
+		data,
+		{aq: true});
+};
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $elm$core$Result$toMaybe = function (result) {
 	if (!result.$) {
@@ -8089,6 +8476,7 @@ var $elm$core$Result$toMaybe = function (result) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $elm$core$Basics$round = _Basics_round;
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$fractionsOfASecondInMs = A2(
 	$elm$parser$Parser$andThen,
 	function (str) {
@@ -8343,7 +8731,8 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 											$elm$parser$Parser$succeed($elm$core$Basics$identity),
 											$elm$parser$Parser$symbol(':')),
 										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
-										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)
+										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
+										$elm$parser$Parser$succeed(0)
 									]))),
 						$elm$parser$Parser$oneOf(
 							_List_fromArray(
@@ -8369,6 +8758,20 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$toTime = function (str) {
 	return A2($elm$parser$Parser$run, $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601, str);
 };
+var $kraklin$elm_debug_parser$DebugParser$Path$Path = $elm$core$Basics$identity;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$toggle = function (value) {
+	if (value.$ === 1) {
+		var isExpanded = value.a;
+		var expandableValue = value.b;
+		if ((expandableValue.$ === 1) && (!expandableValue.b.b)) {
+			return value;
+		} else {
+			return A2($kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable, !isExpanded, expandableValue);
+		}
+	} else {
+		return value;
+	}
+};
 var $elm_community$list_extra$List$Extra$updateIfIndex = F3(
 	function (predicate, update, list) {
 		return A2(
@@ -8379,127 +8782,84 @@ var $elm_community$list_extra$List$Extra$updateIfIndex = F3(
 				}),
 			list);
 	});
-var $author$project$Expandable$map = F3(
-	function (key, fn, value) {
+var $kraklin$elm_debug_parser$DebugParser$Path$toggleValueByPath = F2(
+	function (_v0, value) {
+		var path = _v0;
 		var mapNestedValue = F2(
 			function (mapIndex, mappedFn) {
-				switch (value.$) {
-					case 11:
-						var a = value.a;
-						var values = value.b;
-						return A2(
-							$author$project$Expandable$ElmTuple,
-							a,
-							A3(
-								$elm_community$list_extra$List$Extra$updateIfIndex,
-								$elm$core$Basics$eq(mapIndex),
-								mappedFn,
-								values));
-					case 10:
-						var a = value.a;
-						var b = value.b;
-						var values = value.c;
-						return A3(
-							$author$project$Expandable$ElmSequence,
-							a,
-							b,
-							A3(
-								$elm_community$list_extra$List$Extra$updateIfIndex,
-								$elm$core$Basics$eq(mapIndex),
-								mappedFn,
-								values));
-					case 12:
-						var a = value.a;
-						var values = value.b;
-						return A2(
-							$author$project$Expandable$ElmRecord,
-							a,
-							A3(
-								$elm_community$list_extra$List$Extra$updateIfIndex,
-								$elm$core$Basics$eq(mapIndex),
-								$elm$core$Tuple$mapSecond(mappedFn),
-								values));
-					case 14:
-						var a = value.a;
-						var values = value.b;
-						return A2(
-							$author$project$Expandable$ElmDict,
-							a,
-							A3(
-								$elm_community$list_extra$List$Extra$updateIfIndex,
-								$elm$core$Basics$eq(mapIndex),
-								$elm$core$Tuple$mapSecond(mappedFn),
-								values));
-					case 13:
-						var a = value.a;
-						var b = value.b;
-						var typeValues = value.c;
-						if (!typeValues.b) {
-							return value;
-						} else {
-							var values = typeValues;
-							return A3(
-								$author$project$Expandable$ElmType,
-								a,
-								b,
-								A3(
-									$elm_community$list_extra$List$Extra$updateIfIndex,
-									$elm$core$Basics$eq(mapIndex),
-									mappedFn,
-									values));
-						}
-					default:
-						return value;
+				if (value.$ === 1) {
+					var isOpened = value.a;
+					var expandableValue = value.b;
+					return A2(
+						$kraklin$elm_debug_parser$DebugParser$ElmValue$Expandable,
+						isOpened,
+						function () {
+							switch (expandableValue.$) {
+								case 0:
+									var b = expandableValue.a;
+									var values = expandableValue.b;
+									return A2(
+										$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmSequence,
+										b,
+										A3(
+											$elm_community$list_extra$List$Extra$updateIfIndex,
+											$elm$core$Basics$eq(mapIndex),
+											mappedFn,
+											values));
+								case 2:
+									var values = expandableValue.a;
+									return $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmRecord(
+										A3(
+											$elm_community$list_extra$List$Extra$updateIfIndex,
+											$elm$core$Basics$eq(mapIndex),
+											$elm$core$Tuple$mapSecond(mappedFn),
+											values));
+								case 3:
+									var values = expandableValue.a;
+									return $kraklin$elm_debug_parser$DebugParser$ElmValue$ElmDict(
+										A3(
+											$elm_community$list_extra$List$Extra$updateIfIndex,
+											$elm$core$Basics$eq(mapIndex),
+											$elm$core$Tuple$mapSecond(mappedFn),
+											values));
+								default:
+									var b = expandableValue.a;
+									var typeValues = expandableValue.b;
+									if (!typeValues.b) {
+										return A2($kraklin$elm_debug_parser$DebugParser$ElmValue$ElmType, b, typeValues);
+									} else {
+										var values = typeValues;
+										return A2(
+											$kraklin$elm_debug_parser$DebugParser$ElmValue$ElmType,
+											b,
+											A3(
+												$elm_community$list_extra$List$Extra$updateIfIndex,
+												$elm$core$Basics$eq(mapIndex),
+												mappedFn,
+												values));
+									}
+							}
+						}());
+				} else {
+					return value;
 				}
 			});
-		if (!key.b) {
-			return fn(value);
+		if (!path.b) {
+			return $kraklin$elm_debug_parser$DebugParser$ElmValue$toggle(value);
 		} else {
-			if (!key.b.b) {
-				var idx = key.a;
-				return A2(mapNestedValue, idx, fn);
+			if (!path.b.b) {
+				var idx = path.a;
+				return A2(mapNestedValue, idx, $kraklin$elm_debug_parser$DebugParser$ElmValue$toggle);
 			} else {
-				var idx = key.a;
-				var rest = key.b;
+				var idx = path.a;
+				var rest = path.b;
 				return A2(
 					mapNestedValue,
 					idx,
-					A2($author$project$Expandable$map, rest, fn));
+					$kraklin$elm_debug_parser$DebugParser$Path$toggleValueByPath(rest));
 			}
 		}
 	});
-var $author$project$Expandable$toggle = function (value) {
-	switch (value.$) {
-		case 11:
-			var isOpened = value.a;
-			var values = value.b;
-			return A2($author$project$Expandable$ElmTuple, !isOpened, values);
-		case 10:
-			var seq = value.a;
-			var isOpened = value.b;
-			var values = value.c;
-			return A3($author$project$Expandable$ElmSequence, seq, !isOpened, values);
-		case 12:
-			var isOpened = value.a;
-			var values = value.b;
-			return A2($author$project$Expandable$ElmRecord, !isOpened, values);
-		case 14:
-			var isOpened = value.a;
-			var values = value.b;
-			return A2($author$project$Expandable$ElmDict, !isOpened, values);
-		case 13:
-			var isOpened = value.a;
-			var name = value.b;
-			var values = value.c;
-			if (!values.b) {
-				return value;
-			} else {
-				return A3($author$project$Expandable$ElmType, !isOpened, name, values);
-			}
-		default:
-			return value;
-	}
-};
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
 		get:
@@ -8911,37 +9271,48 @@ var $author$project$DebugMessages$toggleValue = F3(
 			return _Utils_update(
 				storeMessage,
 				{
-					H: A3($author$project$Expandable$map, path, $author$project$Expandable$toggle, storeMessage.H)
+					E: A2($kraklin$elm_debug_parser$DebugParser$Path$toggleValueByPath, path, storeMessage.E)
 				});
 		};
 		return _Utils_update(
 			data,
 			{
-				Q: A3(
+				N: A3(
 					$elm$core$Dict$update,
 					key,
 					$elm$core$Maybe$map(toggleValue_),
-					data.Q)
+					data.N)
 			});
 	});
 var $author$project$Panel$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 5:
+			case 0:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 9:
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							fP: $author$project$DebugMessages$setHoldOn(model.fP),
+							Y: false
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 6:
 				var zone = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{bU: zone}),
+						{cb: zone}),
 					$elm$core$Platform$Cmd$none);
-			case 6:
+			case 7:
 				var filter = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{aJ: filter}),
+						{a_: filter}),
 					$elm$core$Platform$Cmd$none);
-			case 0:
+			case 1:
 				var _v1 = msg.a;
 				var isoTime = _v1.a;
 				var log = _v1.b;
@@ -8965,13 +9336,13 @@ var $author$project$Panel$update = F2(
 							var _v2 = A2(
 								$author$project$DebugMessages$add,
 								A2($author$project$DebugMessages$AddMessageData, posix, log),
-								model.fc);
+								model.fP);
 							if (!_v2.$) {
 								var msgs = _v2.a;
 								return _Utils_Tuple2(
 									_Utils_update(
 										model,
-										{fc: msgs}),
+										{fP: msgs}),
 									$elm$core$Platform$Cmd$none);
 							} else {
 								var err = _v2.a;
@@ -8981,9 +9352,9 @@ var $author$project$Panel$update = F2(
 							}
 						},
 						maybePosix));
-			case 4:
+			case 5:
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			case 1:
+			case 2:
 				var bulkMessages = msg.a;
 				var timeDecoder = A2(
 					$elm$json$Json$Decode$andThen,
@@ -9009,34 +9380,60 @@ var $author$project$Panel$update = F2(
 				var messages = function () {
 					if (!decodedValues.$) {
 						var values = decodedValues.a;
-						return A2($author$project$DebugMessages$bulkAdd, values, model.fc);
+						return A2($author$project$DebugMessages$bulkAdd, values, model.fP);
 					} else {
-						return model.fc;
+						return model.fP;
 					}
 				}();
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{fc: messages}),
+						{fP: messages}),
 					$elm$core$Platform$Cmd$none);
-			case 2:
+			case 3:
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							fc: $author$project$DebugMessages$clear(model.fc)
+							fP: $author$project$DebugMessages$clear(model.fP)
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 4:
 				var key = msg.a;
 				var path = msg.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							fc: A3($author$project$DebugMessages$toggleValue, key, path, model.fc)
+							fP: $author$project$DebugMessages$setHoldOn(
+								A3($author$project$DebugMessages$toggleValue, key, path, model.fP)),
+							Y: false
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 8:
+				return model.Y ? _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							fP: $author$project$DebugMessages$setHoldOn(model.fP),
+							Y: false
+						}),
+					$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							fP: $author$project$DebugMessages$setHoldOff(model.fP),
+							Y: true
+						}),
+					$author$project$Panel$jumpToTheBottom);
+			default:
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							fP: $author$project$DebugMessages$mergeHoldOnQueue(model.fP)
+						}),
+					$author$project$Panel$jumpToTheBottom);
 		}
 	});
 var $author$project$Main$update = F2(
@@ -9047,14 +9444,14 @@ var $author$project$Main$update = F2(
 				var updatedPanelModel = function (pModel) {
 					return _Utils_update(
 						pModel,
-						{bU: zone});
+						{cb: zone});
 				};
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							av: updatedPanelModel(model.av),
-							bU: zone
+							aJ: updatedPanelModel(model.aJ),
+							cb: zone
 						}),
 					$elm$core$Platform$Cmd$none);
 			case 0:
@@ -9062,7 +9459,7 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{ar: str}),
+						{aF: str}),
 					$elm$core$Platform$Cmd$none);
 			case 1:
 				return _Utils_Tuple2(
@@ -9081,37 +9478,77 @@ var $author$project$Main$update = F2(
 							$author$project$Panel$LogReceived,
 							_Utils_Tuple2(
 								$rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime(posixTime),
-								model.ar))));
+								model.aF))));
 			case 2:
-				if (msg.a.$ === 4) {
+				if (msg.a.$ === 5) {
 					var str = msg.a.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								a6: $elm$core$Maybe$Just(str)
+								bs: $elm$core$Maybe$Just(str)
 							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					var pMsg = msg.a;
-					var _v1 = A2($author$project$Panel$update, pMsg, model.av);
+					var _v1 = A2($author$project$Panel$update, pMsg, model.aJ);
 					var pModel = _v1.a;
 					var pCmd = _v1.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{a6: $elm$core$Maybe$Nothing, av: pModel}),
+							{bs: $elm$core$Maybe$Nothing, aJ: pModel}),
 						A2($elm$core$Platform$Cmd$map, $author$project$Main$PanelMsg, pCmd));
 				}
-			default:
+			case 4:
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{ar: $author$project$Main$sampleData}),
+						{aF: $author$project$Main$sampleData}),
 					$elm$core$Platform$Cmd$none);
+			case 6:
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$random$Random$generate,
+						$author$project$Main$AddMultipleMessages,
+						A2(
+							$elm$random$Random$list,
+							10,
+							A2($elm$random$Random$int, 1, 10))));
+			default:
+				var randomValues = msg.a;
+				var time = '2020-08-22T12:22:13.356Z';
+				var messages = A2(
+					$elm$json$Json$Encode$list,
+					function (rand) {
+						return $elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'time',
+									$elm$json$Json$Encode$string(time)),
+									_Utils_Tuple2(
+									'log',
+									$elm$json$Json$Encode$string(
+										A3($elm$core$String$replace, '<VALUE>', rand, $author$project$Main$sampleData)))
+								]));
+					},
+					A2($elm$core$List$map, $elm$core$String$fromInt, randomValues));
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$core$Task$perform,
+						$elm$core$Basics$identity,
+						A3(
+							$elm$core$Basics$composeL,
+							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, $author$project$Main$PanelMsg),
+							$author$project$Panel$BulkLogReceived,
+							messages)));
 		}
 	});
 var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $author$project$Main$GenerateMultipleMessages = {$: 6};
 var $author$project$Main$InputChanged = function (a) {
 	return {$: 0, a: a};
 };
@@ -9196,23 +9633,23 @@ var $elm$core$String$fromFloat = _String_fromNumber;
 var $rtfeldman$elm_css$Css$Internal$lengthConverter = F3(
 	function (units, unitLabel, numericValue) {
 		return {
-			cr: 0,
-			cF: 0,
-			aK: 0,
-			x: 0,
-			a7: 0,
-			aN: 0,
-			ae: 0,
-			aO: 0,
-			aP: 0,
-			as: 0,
-			at: 0,
-			V: 0,
-			ag: numericValue,
-			aW: 0,
-			aZ: unitLabel,
-			bm: units,
-			H: _Utils_ap(
+			cN: 0,
+			c$: 0,
+			a$: 0,
+			H: 0,
+			r: 0,
+			a2: 0,
+			ar: 0,
+			a3: 0,
+			a4: 0,
+			aG: 0,
+			aH: 0,
+			ag: 0,
+			au: numericValue,
+			bc: 0,
+			bf: unitLabel,
+			bC: units,
+			E: _Utils_ap(
 				$elm$core$String$fromFloat(numericValue),
 				unitLabel)
 		};
@@ -9230,12 +9667,12 @@ var $rtfeldman$elm_css$Css$property = F2(
 		return $rtfeldman$elm_css$Css$Preprocess$AppendProperty(key + (':' + value));
 	});
 var $rtfeldman$elm_css$Css$backgroundColor = function (c) {
-	return A2($rtfeldman$elm_css$Css$property, 'background-color', c.H);
+	return A2($rtfeldman$elm_css$Css$property, 'background-color', c.E);
 };
 var $rtfeldman$elm_css$Css$PxUnits = 0;
 var $rtfeldman$elm_css$Css$px = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, 0, 'px');
 var $author$project$Main$bigGap = $rtfeldman$elm_css$Css$px(12);
-var $rtfeldman$elm_css$Css$bold = {ad: 0, H: 'bold'};
+var $rtfeldman$elm_css$Css$bold = {ap: 0, E: 'bold'};
 var $rtfeldman$elm_css$Css$prop3 = F4(
 	function (key, argA, argB, argC) {
 		return A2(
@@ -9245,13 +9682,13 @@ var $rtfeldman$elm_css$Css$prop3 = F4(
 				$elm$core$String$join,
 				' ',
 				_List_fromArray(
-					[argA.H, argB.H, argC.H])));
+					[argA.E, argB.E, argC.E])));
 	});
 var $rtfeldman$elm_css$Css$border3 = $rtfeldman$elm_css$Css$prop3('border');
-var $rtfeldman$elm_css$Css$borderBox = {bZ: 0, bq: 0, H: 'border-box'};
+var $rtfeldman$elm_css$Css$borderBox = {cg: 0, bG: 0, E: 'border-box'};
 var $rtfeldman$elm_css$Css$prop1 = F2(
 	function (key, arg) {
-		return A2($rtfeldman$elm_css$Css$property, key, arg.H);
+		return A2($rtfeldman$elm_css$Css$property, key, arg.E);
 	});
 var $rtfeldman$elm_css$Css$borderRadius = $rtfeldman$elm_css$Css$prop1('border-radius');
 var $rtfeldman$elm_css$Css$borderWidth = $rtfeldman$elm_css$Css$prop1('border-width');
@@ -9259,12 +9696,12 @@ var $rtfeldman$elm_css$Css$bottom = $rtfeldman$elm_css$Css$prop1('bottom');
 var $rtfeldman$elm_css$Css$boxSizing = $rtfeldman$elm_css$Css$prop1('box-sizing');
 var $rtfeldman$elm_css$Html$Styled$button = $rtfeldman$elm_css$Html$Styled$node('button');
 var $rtfeldman$elm_css$Css$color = function (c) {
-	return A2($rtfeldman$elm_css$Css$property, 'color', c.H);
+	return A2($rtfeldman$elm_css$Css$property, 'color', c.E);
 };
-var $rtfeldman$elm_css$Css$row = {b2: 0, a4: 0, H: 'row'};
+var $rtfeldman$elm_css$Css$row = {cl: 0, bq: 0, E: 'row'};
 var $rtfeldman$elm_css$Css$column = _Utils_update(
 	$rtfeldman$elm_css$Css$row,
-	{H: 'column'});
+	{E: 'column'});
 var $rtfeldman$elm_css$VirtualDom$Styled$Attribute = F3(
 	function (a, b, c) {
 		return {$: 0, a: a, b: b, c: c};
@@ -9350,8 +9787,8 @@ var $rtfeldman$elm_css$Css$Structure$compactHelp = F2(
 					A2($elm$core$List$cons, declaration, declarations));
 			case 6:
 				var record = declaration.a;
-				return $elm$core$String$isEmpty(record.eE) ? _Utils_Tuple2(keyframesByName, declarations) : _Utils_Tuple2(
-					A3($elm$core$Dict$insert, record.fg, record.eE, keyframesByName),
+				return $elm$core$String$isEmpty(record.fa) ? _Utils_Tuple2(keyframesByName, declarations) : _Utils_Tuple2(
+					A3($elm$core$Dict$insert, record.fU, record.fa, keyframesByName),
 					declarations);
 			case 7:
 				var properties = declaration.a;
@@ -9397,16 +9834,16 @@ var $rtfeldman$elm_css$Css$Structure$withKeyframeDeclarations = F2(
 					var name = _v0.a;
 					var decl = _v0.b;
 					return $rtfeldman$elm_css$Css$Structure$Keyframes(
-						{eE: decl, fg: name});
+						{fa: decl, fU: name});
 				},
 				$elm$core$Dict$toList(keyframesByName)),
 			compactedDeclarations);
 	});
 var $rtfeldman$elm_css$Css$Structure$compactStylesheet = function (_v0) {
-	var charset = _v0.cH;
-	var imports = _v0.c1;
-	var namespaces = _v0.df;
-	var declarations = _v0.eF;
+	var charset = _v0.c1;
+	var imports = _v0.dq;
+	var namespaces = _v0.dG;
+	var declarations = _v0.fb;
 	var _v1 = A3(
 		$elm$core$List$foldr,
 		$rtfeldman$elm_css$Css$Structure$compactHelp,
@@ -9415,7 +9852,7 @@ var $rtfeldman$elm_css$Css$Structure$compactStylesheet = function (_v0) {
 	var keyframesByName = _v1.a;
 	var compactedDeclarations = _v1.b;
 	var finalDeclarations = A2($rtfeldman$elm_css$Css$Structure$withKeyframeDeclarations, keyframesByName, compactedDeclarations);
-	return {cH: charset, eF: finalDeclarations, c1: imports, df: namespaces};
+	return {c1: charset, fb: finalDeclarations, dq: imports, dG: namespaces};
 };
 var $rtfeldman$elm_css$Css$Structure$Output$charsetToString = function (charset) {
 	return A2(
@@ -9440,13 +9877,13 @@ var $elm$core$List$filter = F2(
 			list);
 	});
 var $rtfeldman$elm_css$Css$Structure$Output$mediaExpressionToString = function (expression) {
-	return '(' + (expression.cP + (A2(
+	return '(' + (expression.db + (A2(
 		$elm$core$Maybe$withDefault,
 		'',
 		A2(
 			$elm$core$Maybe$map,
 			$elm$core$Basics$append(': '),
-			expression.H)) + ')'));
+			expression.E)) + ')'));
 };
 var $rtfeldman$elm_css$Css$Structure$Output$mediaTypeToString = function (mediaType) {
 	switch (mediaType) {
@@ -9687,8 +10124,8 @@ var $rtfeldman$elm_css$Css$Structure$Output$prettyPrintDeclaration = function (d
 		case 5:
 			return 'TODO';
 		case 6:
-			var name = decl.a.fg;
-			var declaration = decl.a.eE;
+			var name = decl.a.fU;
+			var declaration = decl.a.fa;
 			return '@keyframes ' + (name + (' {\n' + (declaration + '\n}')));
 		case 7:
 			return 'TODO';
@@ -9699,10 +10136,10 @@ var $rtfeldman$elm_css$Css$Structure$Output$prettyPrintDeclaration = function (d
 	}
 };
 var $rtfeldman$elm_css$Css$Structure$Output$prettyPrint = function (_v0) {
-	var charset = _v0.cH;
-	var imports = _v0.c1;
-	var namespaces = _v0.df;
-	var declarations = _v0.eF;
+	var charset = _v0.c1;
+	var imports = _v0.dq;
+	var namespaces = _v0.dG;
+	var declarations = _v0.fb;
 	return A2(
 		$elm$core$String$join,
 		'\n\n',
@@ -10117,7 +10554,7 @@ var $rtfeldman$elm_css$Css$Structure$concatMapLastStyleBlock = F2(
 	});
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$HashData = F4(
 	function (shift, seed, hash, charsProcessed) {
-		return {aF: charsProcessed, b5: hash, F: seed, aS: shift};
+		return {U: charsProcessed, cq: hash, d1: seed, aa: shift};
 	});
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$c1 = 3432918353;
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$c2 = 461845907;
@@ -10130,14 +10567,14 @@ var $rtfeldman$elm_css$ElmCssVendor$Murmur3$rotlBy = F2(
 		return (a << b) | (a >>> (32 - b));
 	});
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$finalize = function (data) {
-	var acc = (!(!data.b5)) ? (data.F ^ A2(
+	var acc = (!(!data.cq)) ? (data.d1 ^ A2(
 		$rtfeldman$elm_css$ElmCssVendor$Murmur3$multiplyBy,
 		$rtfeldman$elm_css$ElmCssVendor$Murmur3$c2,
 		A2(
 			$rtfeldman$elm_css$ElmCssVendor$Murmur3$rotlBy,
 			15,
-			A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$multiplyBy, $rtfeldman$elm_css$ElmCssVendor$Murmur3$c1, data.b5)))) : data.F;
-	var h0 = acc ^ data.aF;
+			A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$multiplyBy, $rtfeldman$elm_css$ElmCssVendor$Murmur3$c1, data.cq)))) : data.d1;
+	var h0 = acc ^ data.U;
 	var h1 = A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$multiplyBy, 2246822507, h0 ^ (h0 >>> 16));
 	var h2 = A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$multiplyBy, 3266489909, h1 ^ (h1 >>> 13));
 	return (h2 ^ (h2 >>> 16)) >>> 0;
@@ -10160,17 +10597,17 @@ var $rtfeldman$elm_css$ElmCssVendor$Murmur3$mix = F2(
 	});
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$hashFold = F2(
 	function (c, data) {
-		var res = data.b5 | ((255 & $elm$core$Char$toCode(c)) << data.aS);
-		var _v0 = data.aS;
+		var res = data.cq | ((255 & $elm$core$Char$toCode(c)) << data.aa);
+		var _v0 = data.aa;
 		if (_v0 === 24) {
 			return {
-				aF: data.aF + 1,
-				b5: 0,
-				F: A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$mix, data.F, res),
-				aS: 0
+				U: data.U + 1,
+				cq: 0,
+				d1: A2($rtfeldman$elm_css$ElmCssVendor$Murmur3$mix, data.d1, res),
+				aa: 0
 			};
 		} else {
-			return {aF: data.aF + 1, b5: res, F: data.F, aS: data.aS + 8};
+			return {U: data.U + 1, cq: res, d1: data.d1, aa: data.aa + 8};
 		}
 	});
 var $rtfeldman$elm_css$ElmCssVendor$Murmur3$hashString = F2(
@@ -10650,7 +11087,7 @@ var $rtfeldman$elm_css$Css$Preprocess$Resolve$applyStyles = F2(
 						_List_fromArray(
 							[
 								$rtfeldman$elm_css$Css$Structure$Keyframes(
-								{eE: str, fg: name})
+								{fa: str, fU: name})
 							]));
 				case 4:
 					var _v12 = styles.a;
@@ -10785,13 +11222,13 @@ var $rtfeldman$elm_css$Css$Preprocess$Resolve$toDeclarations = function (snippet
 	}
 };
 var $rtfeldman$elm_css$Css$Preprocess$Resolve$toStructure = function (_v0) {
-	var charset = _v0.cH;
-	var imports = _v0.c1;
-	var namespaces = _v0.df;
-	var snippets = _v0.dE;
+	var charset = _v0.c1;
+	var imports = _v0.dq;
+	var namespaces = _v0.dG;
+	var snippets = _v0.d6;
 	var declarations = $rtfeldman$elm_css$Css$Preprocess$Resolve$extract(
 		A2($elm$core$List$concatMap, $rtfeldman$elm_css$Css$Preprocess$unwrapSnippet, snippets));
-	return {cH: charset, eF: declarations, c1: imports, df: namespaces};
+	return {c1: charset, fb: declarations, dq: imports, dG: namespaces};
 };
 var $rtfeldman$elm_css$Css$Preprocess$Resolve$compileHelp = function (sheet) {
 	return $rtfeldman$elm_css$Css$Structure$Output$prettyPrint(
@@ -10823,7 +11260,7 @@ var $rtfeldman$elm_css$VirtualDom$Styled$makeSnippet = F2(
 	});
 var $rtfeldman$elm_css$VirtualDom$Styled$murmurSeed = 15739;
 var $rtfeldman$elm_css$Css$Preprocess$stylesheet = function (snippets) {
-	return {cH: $elm$core$Maybe$Nothing, c1: _List_Nil, df: _List_Nil, dE: snippets};
+	return {c1: $elm$core$Maybe$Nothing, dq: _List_Nil, dG: _List_Nil, d6: snippets};
 };
 var $rtfeldman$elm_css$VirtualDom$Styled$getClassname = function (styles) {
 	return $elm$core$List$isEmpty(styles) ? 'unstyled' : A2(
@@ -10847,9 +11284,8 @@ var $elm$virtual_dom$VirtualDom$property = F2(
 		return A2(
 			_VirtualDom_property,
 			_VirtualDom_noInnerHtmlOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
+			_VirtualDom_noJavaScriptOrHtmlJson(value));
 	});
-var $elm$json$Json$Encode$string = _Json_wrap;
 var $rtfeldman$elm_css$Html$Styled$Internal$css = function (styles) {
 	var classname = $rtfeldman$elm_css$VirtualDom$Styled$getClassname(styles);
 	var classProperty = A2(
@@ -10891,14 +11327,14 @@ var $rtfeldman$elm_css$Html$Styled$Attributes$boolProperty = F2(
 var $rtfeldman$elm_css$Html$Styled$Attributes$disabled = $rtfeldman$elm_css$Html$Styled$Attributes$boolProperty('disabled');
 var $rtfeldman$elm_css$Css$displayFlex = A2($rtfeldman$elm_css$Css$property, 'display', 'flex');
 var $rtfeldman$elm_css$Html$Styled$div = $rtfeldman$elm_css$Html$Styled$node('div');
-var $rtfeldman$elm_css$Css$fixed = {a1: 0, bc: 0, bQ: 0, H: 'fixed'};
+var $rtfeldman$elm_css$Css$fixed = {bm: 0, bw: 0, b5: 0, E: 'fixed'};
 var $rtfeldman$elm_css$Css$flexDirection = $rtfeldman$elm_css$Css$prop1('flex-direction');
 var $rtfeldman$elm_css$Css$flexEnd = $rtfeldman$elm_css$Css$prop1('flex-end');
 var $rtfeldman$elm_css$Css$flexGrow = $rtfeldman$elm_css$Css$prop1('flex-grow');
 var $rtfeldman$elm_css$Css$flexWrap = $rtfeldman$elm_css$Css$prop1('flex-wrap');
 var $rtfeldman$elm_css$Css$fontSize = $rtfeldman$elm_css$Css$prop1('font-size');
 var $rtfeldman$elm_css$Css$fontWeight = function (_v0) {
-	var value = _v0.H;
+	var value = _v0.E;
 	return A2($rtfeldman$elm_css$Css$property, 'font-weight', value);
 };
 var $rtfeldman$elm_css$Html$Styled$h1 = $rtfeldman$elm_css$Html$Styled$node('h1');
@@ -10909,12 +11345,12 @@ var $rtfeldman$elm_css$Css$withPrecedingHash = function (str) {
 };
 var $rtfeldman$elm_css$Css$erroneousHex = function (str) {
 	return {
-		bY: 1,
-		b_: 0,
-		aG: 0,
-		b3: 0,
+		cf: 1,
 		ch: 0,
-		H: $rtfeldman$elm_css$Css$withPrecedingHash(str)
+		aW: 0,
+		co: 0,
+		cB: 0,
+		E: $rtfeldman$elm_css$Css$withPrecedingHash(str)
 	};
 };
 var $elm$core$Basics$pow = _Basics_pow;
@@ -11139,12 +11575,12 @@ var $rtfeldman$elm_css$Css$validHex = F5(
 			var blue = _v6.a.a;
 			var alpha = _v6.b.a;
 			return {
-				bY: alpha / 255,
-				b_: blue,
-				aG: 0,
-				b3: green,
-				ch: red,
-				H: $rtfeldman$elm_css$Css$withPrecedingHash(str)
+				cf: alpha / 255,
+				ch: blue,
+				aW: 0,
+				co: green,
+				cB: red,
+				E: $rtfeldman$elm_css$Css$withPrecedingHash(str)
 			};
 		} else {
 			return $rtfeldman$elm_css$Css$erroneousHex(str);
@@ -11256,23 +11692,23 @@ var $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty = F2(
 var $rtfeldman$elm_css$Html$Styled$Attributes$href = function (url) {
 	return A2($rtfeldman$elm_css$Html$Styled$Attributes$stringProperty, 'href', url);
 };
-var $rtfeldman$elm_css$Css$initial = {ct: 0, s: 0, a1: 0, cy: 0, aC: 0, cz: 0, aD: 0, Z: 0, z: 0, bq: 0, aG: 0, c: 0, m: 0, aK: 0, b2: 0, a4: 0, bA: 0, ao: 0, x: 0, aL: 0, i: 0, ad: 0, bD: 0, c8: 0, b8: 0, a7: 0, aN: 0, ae: 0, aO: 0, aP: 0, as: 0, at: 0, V: 0, bF: 0, e: 0, d: 0, cd: 0, a9: 0, ag: 0, bJ: 0, aR: 0, N: 0, bQ: 0, aV: 0, ay: 0, aW: 0, aX: 0, az: 0, G: 0, aZ: '', bm: 0, H: 'initial', bn: 0, al: 0};
+var $rtfeldman$elm_css$Css$initial = {cQ: 0, x: 0, bm: 0, cV: 0, aS: 0, cW: 0, aT: 0, ak: 0, J: 0, bG: 0, aW: 0, e: 0, q: 0, a$: 0, cl: 0, bq: 0, bR: 0, aB: 0, H: 0, a0: 0, k: 0, ap: 0, bU: 0, dz: 0, ct: 0, r: 0, a2: 0, ar: 0, a3: 0, a4: 0, aG: 0, aH: 0, ag: 0, bV: 0, g: 0, f: 0, cx: 0, bv: 0, au: 0, bZ: 0, a6: 0, Z: 0, b5: 0, bb: 0, aN: 0, bc: 0, bd: 0, aO: 0, P: 0, bf: '', bC: 0, E: 'initial', bD: 0, ay: 0};
 var $rtfeldman$elm_css$Css$inherit = _Utils_update(
 	$rtfeldman$elm_css$Css$initial,
-	{H: 'inherit'});
+	{E: 'inherit'});
 var $rtfeldman$elm_css$Css$UnitlessInteger = 0;
 var $rtfeldman$elm_css$Css$int = function (val) {
 	return {
-		ad: 0,
-		bD: 0,
-		at: 0,
-		V: 0,
-		a9: 0,
-		bI: 0,
-		ag: val,
-		aZ: '',
-		bm: 0,
-		H: $elm$core$String$fromInt(val)
+		ap: 0,
+		bU: 0,
+		aH: 0,
+		ag: 0,
+		bv: 0,
+		bY: 0,
+		au: val,
+		bf: '',
+		bC: 0,
+		E: $elm$core$String$fromInt(val)
 	};
 };
 var $rtfeldman$elm_css$Css$justifyContent = function (fn) {
@@ -11400,8 +11836,8 @@ var $rtfeldman$elm_css$Html$Styled$map = $rtfeldman$elm_css$VirtualDom$Styled$ma
 var $rtfeldman$elm_css$Css$margin = $rtfeldman$elm_css$Css$prop1('margin');
 var $rtfeldman$elm_css$Css$marginBottom = $rtfeldman$elm_css$Css$prop1('margin-bottom');
 var $rtfeldman$elm_css$Css$minWidth = $rtfeldman$elm_css$Css$prop1('min-width');
-var $rtfeldman$elm_css$Css$none = {aC: 0, cC: 0, z: 0, c: 0, m: 0, eX: 0, c3: 0, b8: 0, aP: 0, as: 0, V: 0, e: 0, d: 0, cd: 0, bJ: 0, fz: 0, N: 0, bL: 0, fI: 0, aV: 0, az: 0, G: 0, j: 0, gi: 0, H: 'none'};
-var $rtfeldman$elm_css$Css$notAllowed = {c: 0, H: 'not-allowed'};
+var $rtfeldman$elm_css$Css$none = {aS: 0, cY: 0, J: 0, e: 0, q: 0, fu: 0, dt: 0, ct: 0, a4: 0, aG: 0, ag: 0, g: 0, f: 0, cx: 0, bZ: 0, gb: 0, Z: 0, b_: 0, gm: 0, bb: 0, aO: 0, P: 0, m: 0, gZ: 0, E: 'none'};
+var $rtfeldman$elm_css$Css$notAllowed = {e: 0, E: 'not-allowed'};
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 0, a: a};
 };
@@ -11468,19 +11904,19 @@ var $rtfeldman$elm_css$Css$prop2 = F3(
 				$elm$core$String$join,
 				' ',
 				_List_fromArray(
-					[argA.H, argB.H])));
+					[argA.E, argB.E])));
 	});
 var $rtfeldman$elm_css$Css$padding2 = $rtfeldman$elm_css$Css$prop2('padding');
 var $rtfeldman$elm_css$Css$PercentageUnits = 0;
 var $rtfeldman$elm_css$Css$pct = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, 0, '%');
 var $rtfeldman$elm_css$Html$Styled$Attributes$placeholder = $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty('placeholder');
-var $rtfeldman$elm_css$Css$pointer = {c: 0, H: 'pointer'};
+var $rtfeldman$elm_css$Css$pointer = {e: 0, E: 'pointer'};
 var $rtfeldman$elm_css$Css$position = $rtfeldman$elm_css$Css$prop1('position');
-var $rtfeldman$elm_css$Css$relative = {bc: 0, H: 'relative'};
+var $rtfeldman$elm_css$Css$relative = {bw: 0, E: 'relative'};
 var $rtfeldman$elm_css$Css$resize = $rtfeldman$elm_css$Css$prop1('resize');
 var $rtfeldman$elm_css$Css$right = $rtfeldman$elm_css$Css$prop1('right');
 var $author$project$Main$smallGap = $rtfeldman$elm_css$Css$px(8);
-var $rtfeldman$elm_css$Css$solid = {z: 0, ay: 0, H: 'solid'};
+var $rtfeldman$elm_css$Css$solid = {J: 0, aN: 0, E: 'solid'};
 var $rtfeldman$elm_css$Css$spaceBetween = $rtfeldman$elm_css$Css$prop1('space-between');
 var $rtfeldman$elm_css$Html$Styled$styled = F4(
 	function (fn, styles, attrs, children) {
@@ -11526,10 +11962,13 @@ var $elm$virtual_dom$VirtualDom$node = function (tag) {
 	return _VirtualDom_node(
 		_VirtualDom_noScript(tag));
 };
-var $elm$virtual_dom$VirtualDom$nodeNS = function (tag) {
-	return _VirtualDom_nodeNS(
-		_VirtualDom_noScript(tag));
-};
+var $elm$virtual_dom$VirtualDom$nodeNS = F2(
+	function (namespace, tag) {
+		return A2(
+			_VirtualDom_nodeNS,
+			namespace,
+			_VirtualDom_noScript(tag));
+	});
 var $rtfeldman$elm_css$VirtualDom$Styled$accumulateKeyedStyledHtml = F2(
 	function (_v6, _v7) {
 		var key = _v6.a;
@@ -11983,18 +12422,69 @@ var $rtfeldman$elm_css$VirtualDom$Styled$toUnstyled = function (vdom) {
 };
 var $rtfeldman$elm_css$Html$Styled$toUnstyled = $rtfeldman$elm_css$VirtualDom$Styled$toUnstyled;
 var $rtfeldman$elm_css$Css$top = $rtfeldman$elm_css$Css$prop1('top');
-var $rtfeldman$elm_css$Css$uppercase = {az: 0, H: 'uppercase'};
+var $rtfeldman$elm_css$Css$uppercase = {aO: 0, E: 'uppercase'};
 var $rtfeldman$elm_css$Html$Styled$Attributes$value = $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty('value');
-var $author$project$Panel$Clear = {$: 2};
+var $author$project$Panel$AutoscrollStopped = {$: 9};
+var $author$project$Panel$Clear = {$: 3};
 var $author$project$Panel$FilterChanged = function (a) {
-	return {$: 6, a: a};
+	return {$: 7, a: a};
 };
+var $author$project$Panel$ShowMoreMessages = {$: 10};
 var $author$project$Panel$Toggle = F2(
 	function (a, b) {
-		return {$: 3, a: a, b: b};
+		return {$: 4, a: a, b: b};
 	});
-var $rtfeldman$elm_css$Css$absolute = {bc: 0, H: 'absolute'};
-var $rtfeldman$elm_css$Css$auto = {d7: 0, c: 0, aK: 0, bD: 0, e9: 0, aN: 0, ae: 0, V: 0, aR: 0, N: 0, bQ: 0, aX: 0, G: 0, H: 'auto'};
+var $author$project$Panel$TogglePaused = {$: 8};
+var $rtfeldman$elm_css$Css$absolute = {bw: 0, E: 'absolute'};
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $rtfeldman$elm_css$VirtualDom$Styled$attribute = F2(
+	function (key, value) {
+		return A3(
+			$rtfeldman$elm_css$VirtualDom$Styled$Attribute,
+			A2($elm$virtual_dom$VirtualDom$attribute, key, value),
+			_List_Nil,
+			'');
+	});
+var $rtfeldman$elm_css$Html$Styled$Attributes$attribute = $rtfeldman$elm_css$VirtualDom$Styled$attribute;
+var $rtfeldman$elm_css$Css$auto = {eE: 0, e: 0, a$: 0, bU: 0, fJ: 0, a2: 0, ar: 0, ag: 0, a6: 0, Z: 0, b5: 0, bd: 0, P: 0, E: 'auto'};
+var $rtfeldman$elm_css$Css$prop4 = F5(
+	function (key, argA, argB, argC, argD) {
+		return A2(
+			$rtfeldman$elm_css$Css$property,
+			key,
+			A2(
+				$elm$core$String$join,
+				' ',
+				_List_fromArray(
+					[argA.E, argB.E, argC.E, argD.E])));
+	});
+var $rtfeldman$elm_css$Css$boxShadow4 = $rtfeldman$elm_css$Css$prop4('box-shadow');
+var $rtfeldman$elm_css$Css$marginRight = $rtfeldman$elm_css$Css$prop1('margin-right');
+var $author$project$Panel$buttonStyles = function (colors) {
+	return _List_fromArray(
+		[
+			$rtfeldman$elm_css$Css$backgroundColor(colors.e_),
+			$rtfeldman$elm_css$Css$color(colors.e$),
+			A2(
+			$rtfeldman$elm_css$Css$padding2,
+			$rtfeldman$elm_css$Css$px(4),
+			$rtfeldman$elm_css$Css$px(8)),
+			$rtfeldman$elm_css$Css$marginRight(
+			$rtfeldman$elm_css$Css$px(4)),
+			$rtfeldman$elm_css$Css$hover(
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Css$backgroundColor(colors.gc),
+					$rtfeldman$elm_css$Css$cursor($rtfeldman$elm_css$Css$pointer)
+				]))
+		]);
+};
 var $rtfeldman$elm_css$Css$fontFamily = $rtfeldman$elm_css$Css$prop1('font-family');
 var $author$project$Panel$formattedTime = F2(
 	function (zone, posix) {
@@ -12042,7 +12532,16 @@ var $author$project$Panel$formattedTime = F2(
 			A2($elm$time$Time$toSecond, zone, posix)) + ('.' + $elm$core$String$fromInt(
 			A2($elm$time$Time$toMillis, zone, posix)))))))))))));
 	});
+var $author$project$DebugMessages$holdOnQueueSize = function (_v0) {
+	var holdOnQueue = _v0.C;
+	return $elm$core$List$length(holdOnQueue);
+};
+var $rtfeldman$elm_css$Html$Styled$Attributes$id = $rtfeldman$elm_css$Html$Styled$Attributes$stringProperty('id');
 var $rtfeldman$elm_css$Html$Styled$input = $rtfeldman$elm_css$Html$Styled$node('input');
+var $author$project$DebugMessages$isHoldOn = function (_v0) {
+	var holdOn = _v0.aq;
+	return holdOn;
+};
 var $elm$core$Tuple$second = function (_v0) {
 	var y = _v0.b;
 	return y;
@@ -12052,30 +12551,26 @@ var $author$project$DebugMessages$messages = function (_v0) {
 	var data = _v0;
 	return A2(
 		$elm$core$List$filterMap,
-		$elm$core$Basics$identity,
-		A2(
-			$elm$core$List$map,
-			function (_v1) {
-				var key = _v1.a;
-				var count = _v1.b;
-				return A2(
-					$elm$core$Maybe$map,
-					function (m) {
-						return {
-							bx: count,
-							c9: key,
-							R: m.R,
-							dL: $author$project$DebugMessages$posixFromKey(key),
-							H: m.H
-						};
-					},
-					A2($elm$core$Dict$get, key, data.Q));
-			},
-			data.J));
+		function (_v1) {
+			var key = _v1.a;
+			var count = _v1.b;
+			return A2(
+				$elm$core$Maybe$map,
+				function (m) {
+					return {
+						bN: count,
+						dA: key,
+						O: m.O,
+						ee: $author$project$DebugMessages$posixFromKey(key),
+						E: m.E
+					};
+				},
+				A2($elm$core$Dict$get, key, data.N));
+		},
+		data.D);
 };
-var $rtfeldman$elm_css$Css$monospace = {ao: 0, H: 'monospace'};
+var $rtfeldman$elm_css$Css$monospace = {aB: 0, E: 'monospace'};
 var $rtfeldman$elm_css$Css$overflow = $rtfeldman$elm_css$Css$prop1('overflow');
-var $author$project$Theme$Dark = 1;
 var $rtfeldman$elm_css$Css$cssFunction = F2(
 	function (funcName, args) {
 		return funcName + ('(' + (A2($elm$core$String$join, ', ', args) + ')'));
@@ -12083,12 +12578,12 @@ var $rtfeldman$elm_css$Css$cssFunction = F2(
 var $rtfeldman$elm_css$Css$rgba = F4(
 	function (r, g, b, alpha) {
 		return {
-			bY: alpha,
-			b_: b,
-			aG: 0,
-			b3: g,
-			ch: r,
-			H: A2(
+			cf: alpha,
+			ch: b,
+			aW: 0,
+			co: g,
+			cB: r,
+			E: A2(
 				$rtfeldman$elm_css$Css$cssFunction,
 				'rgba',
 				_Utils_ap(
@@ -12103,41 +12598,42 @@ var $rtfeldman$elm_css$Css$rgba = F4(
 						])))
 		};
 	});
+var $author$project$Theme$Dark = 1;
 var $author$project$Theme$darkTheme = {
-	cx: $rtfeldman$elm_css$Css$hex('282c34'),
-	ei: $rtfeldman$elm_css$Css$hex('10b1fe'),
-	er: $rtfeldman$elm_css$Css$hex('303030'),
-	es: $rtfeldman$elm_css$Css$hex('F8F8F2'),
-	by: $rtfeldman$elm_css$Css$hex('ff6480'),
-	eL: $rtfeldman$elm_css$Css$hex('7a82da'),
-	eS: $rtfeldman$elm_css$Css$hex('abb2bf'),
-	cW: $rtfeldman$elm_css$Css$hex('636d83'),
-	c7: $rtfeldman$elm_css$Css$hex('636d83'),
-	b9: $rtfeldman$elm_css$Css$hex('ce9887'),
-	di: $rtfeldman$elm_css$Css$hex('ff78f8'),
-	fx: A4($rtfeldman$elm_css$Css$rgba, 255, 255, 255, 0.1),
-	fA: $rtfeldman$elm_css$Css$hex('7a82da'),
-	dB: $rtfeldman$elm_css$Css$hex('3fc56b'),
-	dG: $rtfeldman$elm_css$Css$hex('f9c859'),
-	dP: $rtfeldman$elm_css$Css$hex('282c34')
+	cU: $rtfeldman$elm_css$Css$hex('282c34'),
+	eR: $rtfeldman$elm_css$Css$hex('10b1fe'),
+	e_: $rtfeldman$elm_css$Css$hex('303030'),
+	e$: $rtfeldman$elm_css$Css$hex('F8F8F2'),
+	bO: $rtfeldman$elm_css$Css$hex('ff6480'),
+	fi: $rtfeldman$elm_css$Css$hex('7a82da'),
+	de: $rtfeldman$elm_css$Css$hex('abb2bf'),
+	dk: $rtfeldman$elm_css$Css$hex('636d83'),
+	dx: $rtfeldman$elm_css$Css$hex('636d83'),
+	fK: $rtfeldman$elm_css$Css$hex('ce9887'),
+	f1: $rtfeldman$elm_css$Css$hex('ff78f8'),
+	dP: A4($rtfeldman$elm_css$Css$rgba, 255, 255, 255, 0.1),
+	gc: $rtfeldman$elm_css$Css$hex('7a82da'),
+	d3: $rtfeldman$elm_css$Css$hex('3fc56b'),
+	d9: $rtfeldman$elm_css$Css$hex('f9c859'),
+	g_: $rtfeldman$elm_css$Css$hex('282c34')
 };
 var $author$project$Theme$lightTheme = {
-	cx: $rtfeldman$elm_css$Css$hex('f9f9f9'),
-	ei: $rtfeldman$elm_css$Css$hex('0098dd'),
-	er: $rtfeldman$elm_css$Css$hex('f0f0f0'),
-	es: $rtfeldman$elm_css$Css$hex('383a42'),
-	by: $rtfeldman$elm_css$Css$hex('d52753'),
-	eL: $rtfeldman$elm_css$Css$hex('7a82da'),
-	eS: $rtfeldman$elm_css$Css$hex('383a42'),
-	cW: $rtfeldman$elm_css$Css$hex('a0a1a7'),
-	c7: $rtfeldman$elm_css$Css$hex('a0a1a7'),
-	b9: $rtfeldman$elm_css$Css$hex('a05a48'),
-	di: $rtfeldman$elm_css$Css$hex('ce33c0'),
-	fx: $rtfeldman$elm_css$Css$hex('ffffff'),
-	fA: $rtfeldman$elm_css$Css$hex('7a82da'),
-	dB: $rtfeldman$elm_css$Css$hex('23974a'),
-	dG: $rtfeldman$elm_css$Css$hex('c5a332'),
-	dP: $rtfeldman$elm_css$Css$hex('f9f9f9')
+	cU: $rtfeldman$elm_css$Css$hex('f8f8f8'),
+	eR: $rtfeldman$elm_css$Css$hex('0098dd'),
+	e_: $rtfeldman$elm_css$Css$hex('f0f0f0'),
+	e$: $rtfeldman$elm_css$Css$hex('383a42'),
+	bO: $rtfeldman$elm_css$Css$hex('d52753'),
+	fi: $rtfeldman$elm_css$Css$hex('7a82da'),
+	de: $rtfeldman$elm_css$Css$hex('383a42'),
+	dk: $rtfeldman$elm_css$Css$hex('a0a1a7'),
+	dx: $rtfeldman$elm_css$Css$hex('a0a1a7'),
+	fK: $rtfeldman$elm_css$Css$hex('a05a48'),
+	f1: $rtfeldman$elm_css$Css$hex('ce33c0'),
+	dP: $rtfeldman$elm_css$Css$hex('ffffff'),
+	gc: $rtfeldman$elm_css$Css$hex('7a82da'),
+	d3: $rtfeldman$elm_css$Css$hex('23974a'),
+	d9: $rtfeldman$elm_css$Css$hex('c5a332'),
+	g_: $rtfeldman$elm_css$Css$hex('f9f9f9')
 };
 var $author$project$Theme$themeColors = function (theme) {
 	return (theme === 1) ? $author$project$Theme$darkTheme : $author$project$Theme$lightTheme;
@@ -12153,8 +12649,8 @@ var $rtfeldman$elm_css$Css$baseline = $rtfeldman$elm_css$Css$prop1('baseline');
 var $rtfeldman$elm_css$Css$center = $rtfeldman$elm_css$Css$prop1('center');
 var $rtfeldman$elm_css$Css$display = $rtfeldman$elm_css$Css$prop1('display');
 var $rtfeldman$elm_css$Css$stringsToValue = function (list) {
-	return $elm$core$List$isEmpty(list) ? {H: 'none'} : {
-		H: A2(
+	return $elm$core$List$isEmpty(list) ? {E: 'none'} : {
+		E: A2(
 			$elm$core$String$join,
 			', ',
 			A2(
@@ -12169,8 +12665,8 @@ var $rtfeldman$elm_css$Css$fontFamilies = A2(
 	$elm$core$Basics$composeL,
 	$rtfeldman$elm_css$Css$prop1('font-family'),
 	$rtfeldman$elm_css$Css$stringsToValue);
-var $rtfeldman$elm_css$Css$inlineBlock = {m: 0, H: 'inline-block'};
-var $rtfeldman$elm_css$Css$marginRight = $rtfeldman$elm_css$Css$prop1('margin-right');
+var $kraklin$elm_debug_parser$DebugParser$Path$initPath = _List_Nil;
+var $rtfeldman$elm_css$Css$inlineBlock = {q: 0, E: 'inline-block'};
 var $rtfeldman$elm_css$Html$Styled$span = $rtfeldman$elm_css$Html$Styled$node('span');
 var $rtfeldman$elm_css$Css$textAlign = function (fn) {
 	return A3(
@@ -12182,52 +12678,66 @@ var $rtfeldman$elm_css$Css$textAlign = function (fn) {
 var $rtfeldman$elm_css$Css$borderLeft3 = $rtfeldman$elm_css$Css$prop3('border-left');
 var $rtfeldman$elm_css$Css$EmUnits = 0;
 var $rtfeldman$elm_css$Css$em = A2($rtfeldman$elm_css$Css$Internal$lengthConverter, 0, 'em');
-var $rtfeldman$elm_css$Css$fontStyle = $rtfeldman$elm_css$Css$prop1('font-style');
 var $rtfeldman$elm_css$VirtualDom$Styled$unstyledAttribute = function (prop) {
 	return A3($rtfeldman$elm_css$VirtualDom$Styled$Attribute, prop, _List_Nil, '');
 };
 var $rtfeldman$elm_css$Html$Styled$Attributes$fromUnstyled = $rtfeldman$elm_css$VirtualDom$Styled$unstyledAttribute;
-var $author$project$Expandable$hasNestedValues = function (value) {
-	switch (value.$) {
-		case 11:
-			return true;
-		case 10:
-			var values = value.c;
-			return !$elm$core$List$isEmpty(values);
-		case 12:
-			return true;
-		case 14:
-			var values = value.b;
-			return !$elm$core$List$isEmpty(values);
-		case 13:
-			var values = value.c;
-			return !$elm$core$List$isEmpty(values);
-		default:
-			return false;
+var $kraklin$elm_debug_parser$DebugParser$ElmValue$hasNestedValues = function (value) {
+	if (value.$ === 1) {
+		var expandableValue = value.b;
+		switch (expandableValue.$) {
+			case 0:
+				var values = expandableValue.b;
+				return !$elm$core$List$isEmpty(values);
+			case 2:
+				return true;
+			case 3:
+				var values = expandableValue.a;
+				return !$elm$core$List$isEmpty(values);
+			default:
+				var values = expandableValue.b;
+				return !$elm$core$List$isEmpty(values);
+		}
+	} else {
+		return false;
 	}
 };
-var $author$project$Expandable$isValueOpened = function (value) {
-	switch (value.$) {
-		case 11:
-			var isOpened = value.a;
-			return isOpened;
-		case 10:
-			var isOpened = value.b;
-			return isOpened;
-		case 12:
-			var isOpened = value.a;
-			return isOpened;
-		case 14:
-			var isOpened = value.a;
-			return isOpened;
-		case 13:
-			var isOpened = value.a;
-			return isOpened;
-		default:
-			return false;
+var $kraklin$elm_debug_parser$DebugParser$Path$indexFromPath = function (_v0) {
+	var path = _v0;
+	return A2(
+		$elm$core$Maybe$withDefault,
+		0,
+		$elm$core$List$head(
+			$elm$core$List$reverse(path)));
+};
+var $author$project$Expandable$isValueExpanded = function (value) {
+	if (value.$ === 1) {
+		var isOpened = value.a;
+		return isOpened;
+	} else {
+		return false;
 	}
 };
-var $rtfeldman$elm_css$Css$italic = {aL: 0, H: 'italic'};
+var $kraklin$elm_debug_parser$DebugParser$Path$mapValuesWithPath = F3(
+	function (_v0, mapFn, values) {
+		var parentPath = _v0;
+		var newPath = function (idx) {
+			return _Utils_ap(
+				parentPath,
+				_List_fromArray(
+					[idx]));
+		};
+		return A2(
+			$elm$core$List$indexedMap,
+			F2(
+				function (idx, value) {
+					return A2(
+						mapFn,
+						newPath(idx),
+						value);
+				}),
+			values);
+	});
 var $rtfeldman$elm_css$Css$marginLeft = $rtfeldman$elm_css$Css$prop1('margin-left');
 var $elm$html$Html$Events$stopPropagationOn = F2(
 	function (event, decoder) {
@@ -12245,7 +12755,48 @@ var $elm_community$html_extra$Html$Events$Extra$onClickStopPropagation = functio
 };
 var $rtfeldman$elm_css$Css$paddingLeft = $rtfeldman$elm_css$Css$prop1('padding-left');
 var $rtfeldman$elm_css$Css$textDecoration = $rtfeldman$elm_css$Css$prop1('text-decoration');
-var $rtfeldman$elm_css$Css$underline = {aV: 0, H: 'underline'};
+var $rtfeldman$elm_css$Css$width = $rtfeldman$elm_css$Css$prop1('width');
+var $author$project$Expandable$triangle = F2(
+	function (colorTheme, isOpened) {
+		return A2(
+			$rtfeldman$elm_css$Html$Styled$div,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Css$display($rtfeldman$elm_css$Css$inlineBlock),
+							$rtfeldman$elm_css$Css$width(
+							$rtfeldman$elm_css$Css$px(12)),
+							$rtfeldman$elm_css$Css$color(colorTheme.fi)
+						]))
+				]),
+			_List_fromArray(
+				[
+					isOpened ? $rtfeldman$elm_css$Html$Styled$text('▾') : $rtfeldman$elm_css$Html$Styled$text('▸')
+				]));
+	});
+var $rtfeldman$elm_css$Css$underline = {bb: 0, E: 'underline'};
+var $rtfeldman$elm_css$Css$fontStyle = $rtfeldman$elm_css$Css$prop1('font-style');
+var $rtfeldman$elm_css$Css$italic = {a0: 0, E: 'italic'};
+var $author$project$Expandable$viewKey = F2(
+	function (colorTheme, key) {
+		return A2(
+			$rtfeldman$elm_css$Html$Styled$span,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Css$color(colorTheme.fK),
+							$rtfeldman$elm_css$Css$fontStyle($rtfeldman$elm_css$Css$italic)
+						]))
+				]),
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$text(key)
+				]));
+	});
 var $elm$core$List$intersperse = F2(
 	function (sep, xs) {
 		if (!xs.b) {
@@ -12267,206 +12818,47 @@ var $elm$core$List$intersperse = F2(
 var $author$project$Expandable$viewValueHeaderInner = F3(
 	function (level, colorTheme, value) {
 		var viewValueFn = A2($author$project$Expandable$viewValueHeaderInner, level + 1, colorTheme);
-		switch (value.$) {
-			case 11:
-				var children = value.b;
-				return (level > 1) ? A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text('(…)')
-						])) : A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text('('),
-							A2(
+		if (value.$ === 1) {
+			switch (value.b.$) {
+				case 0:
+					var _v1 = value.b;
+					var seqType = _v1.a;
+					var children = _v1.b;
+					var typeToString = function () {
+						switch (seqType) {
+							case 0:
+								return 'Set';
+							case 1:
+								return 'List';
+							case 2:
+								return 'Array';
+							default:
+								return 'Tuple';
+						}
+					}();
+					if (seqType === 3) {
+						return (level > 1) ? A2(
 							$rtfeldman$elm_css$Html$Styled$span,
 							_List_Nil,
-							A2(
-								$elm$core$List$intersperse,
-								$rtfeldman$elm_css$Html$Styled$text(', '),
-								A2($elm$core$List$map, viewValueFn, children))),
-							$rtfeldman$elm_css$Html$Styled$text(')')
-						]));
-			case 10:
-				var seqType = value.a;
-				var children = value.c;
-				var typeToString = function () {
-					switch (seqType) {
-						case 0:
-							return 'Set';
-						case 1:
-							return 'List';
-						default:
-							return 'Array';
-					}
-				}();
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_Nil,
-					_List_fromArray(
-						[
-							A2(
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Html$Styled$text('(…)')
+								])) : A2(
 							$rtfeldman$elm_css$Html$Styled$span,
+							_List_Nil,
 							_List_fromArray(
 								[
-									$rtfeldman$elm_css$Html$Styled$Attributes$css(
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Css$color(colorTheme.dB)
-										]))
-								]),
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text(typeToString)
-								])),
-							$rtfeldman$elm_css$Html$Styled$text(
-							'(' + ($elm$core$String$fromInt(
-								$elm$core$List$length(children)) + ')'))
-						]));
-			case 12:
-				var recordValues = value.b;
-				var keySpan = function (name) {
-					return A2(
-						$rtfeldman$elm_css$Html$Styled$span,
-						_List_Nil,
-						_List_fromArray(
-							[
-								A2(
-								$rtfeldman$elm_css$Html$Styled$span,
-								_List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$Attributes$css(
-										_List_fromArray(
-											[
-												$rtfeldman$elm_css$Css$color(colorTheme.b9),
-												$rtfeldman$elm_css$Css$fontStyle($rtfeldman$elm_css$Css$italic)
-											]))
-									]),
-								_List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text(name)
-									])),
-								$rtfeldman$elm_css$Html$Styled$text(': ')
-							]));
-				};
-				return (level > 1) ? A2(
-					$elm$core$Maybe$withDefault,
-					$rtfeldman$elm_css$Html$Styled$text(''),
-					A2(
-						$elm$core$Maybe$map,
-						function (_v2) {
-							var name = _v2.a;
-							return A2(
-								$rtfeldman$elm_css$Html$Styled$span,
-								_List_Nil,
-								_List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text('{ '),
-										keySpan(name),
-										$rtfeldman$elm_css$Html$Styled$text('… }')
-									]));
-						},
-						$elm$core$List$head(recordValues))) : A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_Nil,
-					function () {
-						if (!recordValues.b) {
-							return _List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text('{}')
-								]);
-						} else {
-							if (!recordValues.b.b) {
-								var _v4 = recordValues.a;
-								var name = _v4.a;
-								var singleValue = _v4.b;
-								return _List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text('{ '),
-										keySpan(name),
-										viewValueFn(singleValue),
-										$rtfeldman$elm_css$Html$Styled$text(' }')
-									]);
-							} else {
-								var _v5 = recordValues.a;
-								var name = _v5.a;
-								var firstItem = _v5.b;
-								var _v6 = recordValues.b;
-								var _v7 = _v6.a;
-								var secName = _v7.a;
-								var secItem = _v7.b;
-								var rest = _v6.b;
-								return _List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text('{ '),
-										keySpan(name),
-										viewValueFn(firstItem),
+									$rtfeldman$elm_css$Html$Styled$text('('),
+									A2(
+									$rtfeldman$elm_css$Html$Styled$span,
+									_List_Nil,
+									A2(
+										$elm$core$List$intersperse,
 										$rtfeldman$elm_css$Html$Styled$text(', '),
-										keySpan(secName),
-										viewValueFn(secItem),
-										$elm$core$List$isEmpty(rest) ? $rtfeldman$elm_css$Html$Styled$text(' }') : $rtfeldman$elm_css$Html$Styled$text(', … }')
-									]);
-							}
-						}
-					}());
-			case 14:
-				var dictValues = value.b;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_Nil,
-					_List_fromArray(
-						[
-							A2(
-							$rtfeldman$elm_css$Html$Styled$span,
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$Attributes$css(
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Css$color(colorTheme.dB)
-										]))
-								]),
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text('Dict')
-								])),
-							$rtfeldman$elm_css$Html$Styled$text(
-							'(' + ($elm$core$String$fromInt(
-								$elm$core$List$length(dictValues)) + ')'))
-						]));
-			case 13:
-				var name = value.b;
-				var values = value.c;
-				var isTypeWithValues = function (value_) {
-					if ((value_.$ === 13) && value_.c.b) {
-						var _v10 = value_.c;
-						return true;
+										A2($elm$core$List$map, viewValueFn, children))),
+									$rtfeldman$elm_css$Html$Styled$text(')')
+								]));
 					} else {
-						return false;
-					}
-				};
-				if (!values.b) {
-					return A2(
-						$rtfeldman$elm_css$Html$Styled$span,
-						_List_fromArray(
-							[
-								$rtfeldman$elm_css$Html$Styled$Attributes$css(
-								_List_fromArray(
-									[
-										$rtfeldman$elm_css$Css$color(colorTheme.by)
-									]))
-							]),
-						_List_fromArray(
-							[
-								$rtfeldman$elm_css$Html$Styled$text(name)
-							]));
-				} else {
-					if (!values.b.b) {
-						var oneValue = values.a;
 						return A2(
 							$rtfeldman$elm_css$Html$Styled$span,
 							_List_Nil,
@@ -12479,22 +12871,149 @@ var $author$project$Expandable$viewValueHeaderInner = F3(
 											$rtfeldman$elm_css$Html$Styled$Attributes$css(
 											_List_fromArray(
 												[
-													$rtfeldman$elm_css$Css$color(colorTheme.by)
+													$rtfeldman$elm_css$Css$color(colorTheme.d3)
 												]))
 										]),
 									_List_fromArray(
 										[
-											$rtfeldman$elm_css$Html$Styled$text(name + ' ')
+											$rtfeldman$elm_css$Html$Styled$text(typeToString)
 										])),
-									viewValueFn(oneValue)
+									$rtfeldman$elm_css$Html$Styled$text(
+									'(' + ($elm$core$String$fromInt(
+										$elm$core$List$length(children)) + ')'))
 								]));
-					} else {
-						var first = values.a;
-						var rest = values.b;
+					}
+				case 2:
+					var recordValues = value.b.a;
+					var keySpan = function (name) {
 						return A2(
 							$rtfeldman$elm_css$Html$Styled$span,
 							_List_Nil,
-							_Utils_ap(
+							_List_fromArray(
+								[
+									A2($author$project$Expandable$viewKey, colorTheme, name),
+									$rtfeldman$elm_css$Html$Styled$text(': ')
+								]));
+					};
+					return (level > 1) ? A2(
+						$elm$core$Maybe$withDefault,
+						$rtfeldman$elm_css$Html$Styled$text(''),
+						A2(
+							$elm$core$Maybe$map,
+							function (_v4) {
+								var name = _v4.a;
+								return A2(
+									$rtfeldman$elm_css$Html$Styled$span,
+									_List_Nil,
+									_List_fromArray(
+										[
+											$rtfeldman$elm_css$Html$Styled$text('{ '),
+											keySpan(name),
+											$rtfeldman$elm_css$Html$Styled$text('… }')
+										]));
+							},
+							$elm$core$List$head(recordValues))) : A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_Nil,
+						function () {
+							if (!recordValues.b) {
+								return _List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$text('{}')
+									]);
+							} else {
+								if (!recordValues.b.b) {
+									var _v6 = recordValues.a;
+									var name = _v6.a;
+									var singleValue = _v6.b;
+									return _List_fromArray(
+										[
+											$rtfeldman$elm_css$Html$Styled$text('{ '),
+											keySpan(name),
+											viewValueFn(singleValue),
+											$rtfeldman$elm_css$Html$Styled$text(' }')
+										]);
+								} else {
+									var _v7 = recordValues.a;
+									var name = _v7.a;
+									var firstItem = _v7.b;
+									var _v8 = recordValues.b;
+									var _v9 = _v8.a;
+									var secName = _v9.a;
+									var secItem = _v9.b;
+									var rest = _v8.b;
+									return _List_fromArray(
+										[
+											$rtfeldman$elm_css$Html$Styled$text('{ '),
+											keySpan(name),
+											viewValueFn(firstItem),
+											$rtfeldman$elm_css$Html$Styled$text(', '),
+											keySpan(secName),
+											viewValueFn(secItem),
+											$elm$core$List$isEmpty(rest) ? $rtfeldman$elm_css$Html$Styled$text(' }') : $rtfeldman$elm_css$Html$Styled$text(', … }')
+										]);
+								}
+							}
+						}());
+				case 3:
+					var dictValues = value.b.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$rtfeldman$elm_css$Html$Styled$span,
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$Attributes$css(
+										_List_fromArray(
+											[
+												$rtfeldman$elm_css$Css$color(colorTheme.d3)
+											]))
+									]),
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$text('Dict')
+									])),
+								$rtfeldman$elm_css$Html$Styled$text(
+								'(' + ($elm$core$String$fromInt(
+									$elm$core$List$length(dictValues)) + ')'))
+							]));
+				default:
+					var _v10 = value.b;
+					var name = _v10.a;
+					var values = _v10.b;
+					var isTypeWithValues = function (value_) {
+						if (((value_.$ === 1) && (value_.b.$ === 1)) && value_.b.b.b) {
+							var _v13 = value_.b;
+							var _v14 = _v13.b;
+							return true;
+						} else {
+							return false;
+						}
+					};
+					if (!values.b) {
+						return A2(
+							$rtfeldman$elm_css$Html$Styled$span,
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Html$Styled$Attributes$css(
+									_List_fromArray(
+										[
+											$rtfeldman$elm_css$Css$color(colorTheme.bO)
+										]))
+								]),
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Html$Styled$text(name)
+								]));
+					} else {
+						if (!values.b.b) {
+							var oneValue = values.a;
+							return A2(
+								$rtfeldman$elm_css$Html$Styled$span,
+								_List_Nil,
 								_List_fromArray(
 									[
 										A2(
@@ -12504,212 +13023,209 @@ var $author$project$Expandable$viewValueHeaderInner = F3(
 												$rtfeldman$elm_css$Html$Styled$Attributes$css(
 												_List_fromArray(
 													[
-														$rtfeldman$elm_css$Css$color(colorTheme.by)
+														$rtfeldman$elm_css$Css$color(colorTheme.bO)
 													]))
 											]),
 										_List_fromArray(
 											[
-												$rtfeldman$elm_css$Html$Styled$text(name)
+												$rtfeldman$elm_css$Html$Styled$text(name + ' ')
 											])),
-										$rtfeldman$elm_css$Html$Styled$text(' ')
-									]),
-								((level > 1) && (!$elm$core$List$isEmpty(rest))) ? _List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text('('),
-										viewValueFn(first),
-										$rtfeldman$elm_css$Html$Styled$text(' … )')
-									]) : ((level > 0) ? _List_fromArray(
-									[
-										$rtfeldman$elm_css$Html$Styled$text('('),
-										viewValueFn(first),
-										$rtfeldman$elm_css$Html$Styled$text(' … )')
-									]) : A2(
-									$elm$core$List$intersperse,
-									$rtfeldman$elm_css$Html$Styled$text(' '),
-									A2(
-										$elm$core$List$map,
-										function (v) {
-											return A2(
-												$rtfeldman$elm_css$Html$Styled$span,
-												_List_Nil,
-												isTypeWithValues(v) ? _List_fromArray(
-													[
-														$rtfeldman$elm_css$Html$Styled$text('('),
-														viewValueFn(v),
-														$rtfeldman$elm_css$Html$Styled$text(')')
-													]) : _List_fromArray(
-													[
-														viewValueFn(v)
-													]));
-										},
-										values)))));
+										viewValueFn(oneValue)
+									]));
+						} else {
+							var first = values.a;
+							var rest = values.b;
+							return A2(
+								$rtfeldman$elm_css$Html$Styled$span,
+								_List_Nil,
+								_Utils_ap(
+									_List_fromArray(
+										[
+											A2(
+											$rtfeldman$elm_css$Html$Styled$span,
+											_List_fromArray(
+												[
+													$rtfeldman$elm_css$Html$Styled$Attributes$css(
+													_List_fromArray(
+														[
+															$rtfeldman$elm_css$Css$color(colorTheme.bO)
+														]))
+												]),
+											_List_fromArray(
+												[
+													$rtfeldman$elm_css$Html$Styled$text(name)
+												])),
+											$rtfeldman$elm_css$Html$Styled$text(' ')
+										]),
+									((level > 1) && (!$elm$core$List$isEmpty(rest))) ? _List_fromArray(
+										[
+											$rtfeldman$elm_css$Html$Styled$text('('),
+											viewValueFn(first),
+											$rtfeldman$elm_css$Html$Styled$text(' … )')
+										]) : ((level > 0) ? _List_fromArray(
+										[
+											$rtfeldman$elm_css$Html$Styled$text('('),
+											viewValueFn(first),
+											$rtfeldman$elm_css$Html$Styled$text(' … )')
+										]) : A2(
+										$elm$core$List$intersperse,
+										$rtfeldman$elm_css$Html$Styled$text(' '),
+										A2(
+											$elm$core$List$map,
+											function (v) {
+												return A2(
+													$rtfeldman$elm_css$Html$Styled$span,
+													_List_Nil,
+													isTypeWithValues(v) ? _List_fromArray(
+														[
+															$rtfeldman$elm_css$Html$Styled$text('('),
+															viewValueFn(v),
+															$rtfeldman$elm_css$Html$Styled$text(')')
+														]) : _List_fromArray(
+														[
+															viewValueFn(v)
+														]));
+											},
+											values)))));
+						}
 					}
-				}
-			case 0:
-				var str = value.a;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.dG)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text('\"' + (str + '\"'))
-						]));
-			case 1:
-				var str = value.a;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.dG)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text(
-							'\'' + ($elm$core$String$fromChar(str) + '\''))
-						]));
-			case 3:
-				var _float = value.a;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.di)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text(
-							$elm$core$String$fromFloat(_float) + 'f')
-						]));
-			case 2:
-				var _int = value.a;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.di)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text(
-							$elm$core$String$fromInt(_int))
-						]));
-			case 4:
-				var bool = value.a;
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.ei)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text(
-							bool ? 'True' : 'False')
-						]));
-			case 6:
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.c7)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text('<internals>')
-						]));
-			case 5:
-				return A2(
-					$rtfeldman$elm_css$Html$Styled$span,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$color(colorTheme.c7)
-								]))
-						]),
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$text('<function>')
-						]));
-			case 7:
-				return $rtfeldman$elm_css$Html$Styled$text('()');
-			case 8:
-				var name = value.a;
-				return $rtfeldman$elm_css$Html$Styled$text(name);
-			default:
-				var count = value.a;
-				return $rtfeldman$elm_css$Html$Styled$text(
-					$elm$core$String$fromInt(count) + 'B');
+			}
+		} else {
+			switch (value.a.$) {
+				case 0:
+					var str = value.a.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.d9)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text('\"' + (str + '\"'))
+							]));
+				case 1:
+					var str = value.a.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.d9)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text(
+								'\'' + ($elm$core$String$fromChar(str) + '\''))
+							]));
+				case 2:
+					var _float = value.a.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.f1)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text(
+								$elm$core$String$fromFloat(_float))
+							]));
+				case 3:
+					var bool = value.a.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.eR)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text(
+								bool ? 'True' : 'False')
+							]));
+				case 5:
+					var _v15 = value.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.dx)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text('<internals>')
+							]));
+				case 4:
+					var _v16 = value.a;
+					return A2(
+						$rtfeldman$elm_css$Html$Styled$span,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$color(colorTheme.dx)
+									]))
+							]),
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$text('<function>')
+							]));
+				case 6:
+					var _v17 = value.a;
+					return $rtfeldman$elm_css$Html$Styled$text('()');
+				case 7:
+					var name = value.a.a;
+					return $rtfeldman$elm_css$Html$Styled$text(name);
+				default:
+					var count = value.a.a;
+					return $rtfeldman$elm_css$Html$Styled$text(
+						$elm$core$String$fromInt(count) + 'B');
+			}
 		}
 	});
 var $author$project$Expandable$viewValueHeader = $author$project$Expandable$viewValueHeaderInner(0);
-var $rtfeldman$elm_css$Css$width = $rtfeldman$elm_css$Css$prop1('width');
 var $author$project$Expandable$valueHeader = F5(
-	function (colorTheme, toggleMsg, toggleKey, maybeKey, value) {
-		var viewValueContent = $author$project$Expandable$isValueOpened(value) ? A2(
+	function (colorTheme, toggleMsg, togglePath, maybeKey, value) {
+		var viewValueContent = $author$project$Expandable$isValueExpanded(value) ? A2(
 			$rtfeldman$elm_css$Html$Styled$div,
 			_List_Nil,
 			_List_fromArray(
 				[
-					A4($author$project$Expandable$viewValue, colorTheme, toggleMsg, toggleKey, value)
+					A4($author$project$Expandable$viewValue, colorTheme, toggleMsg, togglePath, value)
 				])) : $rtfeldman$elm_css$Html$Styled$text('');
-		var triangle = A2(
-			$rtfeldman$elm_css$Html$Styled$div,
-			_List_fromArray(
-				[
-					$rtfeldman$elm_css$Html$Styled$Attributes$css(
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Css$display($rtfeldman$elm_css$Css$inlineBlock),
-							$rtfeldman$elm_css$Css$width(
-							$rtfeldman$elm_css$Css$px(12)),
-							$rtfeldman$elm_css$Css$color(colorTheme.eL)
-						]))
-				]),
-			_List_fromArray(
-				[
-					$author$project$Expandable$isValueOpened(value) ? $rtfeldman$elm_css$Html$Styled$text('▾') : $rtfeldman$elm_css$Html$Styled$text('▸')
-				]));
 		var headerValue = A2($author$project$Expandable$viewValueHeader, colorTheme, value);
 		var headerWithKey = function () {
 			if (maybeKey.$ === 1) {
 				return headerValue;
 			} else {
-				var key = maybeKey.a;
+				var path = maybeKey.a;
 				return A2(
 					$rtfeldman$elm_css$Html$Styled$span,
 					_List_Nil,
 					_List_fromArray(
 						[
-							key,
+							path,
 							A2(
 							$rtfeldman$elm_css$Html$Styled$span,
 							_List_Nil,
@@ -12721,7 +13237,7 @@ var $author$project$Expandable$valueHeader = F5(
 						]));
 			}
 		}();
-		return $author$project$Expandable$hasNestedValues(value) ? A2(
+		return $kraklin$elm_debug_parser$DebugParser$ElmValue$hasNestedValues(value) ? A2(
 			$rtfeldman$elm_css$Html$Styled$div,
 			_List_Nil,
 			_List_fromArray(
@@ -12732,7 +13248,7 @@ var $author$project$Expandable$valueHeader = F5(
 						[
 							$rtfeldman$elm_css$Html$Styled$Attributes$fromUnstyled(
 							$elm_community$html_extra$Html$Events$Extra$onClickStopPropagation(
-								toggleMsg(toggleKey))),
+								toggleMsg(togglePath))),
 							$rtfeldman$elm_css$Html$Styled$Attributes$css(
 							_List_fromArray(
 								[
@@ -12740,13 +13256,19 @@ var $author$project$Expandable$valueHeader = F5(
 									$rtfeldman$elm_css$Css$hover(
 									_List_fromArray(
 										[
-											$rtfeldman$elm_css$Css$backgroundColor(colorTheme.dP),
+											$rtfeldman$elm_css$Css$backgroundColor(colorTheme.g_),
 											$rtfeldman$elm_css$Css$textDecoration($rtfeldman$elm_css$Css$underline)
 										]))
 								]))
 						]),
 					_List_fromArray(
-						[triangle, headerWithKey])),
+						[
+							A2(
+							$author$project$Expandable$triangle,
+							colorTheme,
+							$author$project$Expandable$isValueExpanded(value)),
+							headerWithKey
+						])),
 					viewValueContent
 				])) : A2(
 			$rtfeldman$elm_css$Html$Styled$div,
@@ -12763,39 +13285,10 @@ var $author$project$Expandable$valueHeader = F5(
 				[headerWithKey]));
 	});
 var $author$project$Expandable$viewValue = F4(
-	function (colorTheme, toggleMsg, parentKey, value) {
-		var toggleKey = function (idx) {
-			return _Utils_ap(
-				parentKey,
-				_List_fromArray(
-					[idx]));
+	function (colorTheme, toggleMsg, parentPath, value) {
+		var header = function (path) {
+			return A3($author$project$Expandable$valueHeader, colorTheme, toggleMsg, path);
 		};
-		var toggableDivWrapper = F2(
-			function (idx, child) {
-				return A5(
-					$author$project$Expandable$valueHeader,
-					colorTheme,
-					toggleMsg,
-					toggleKey(idx),
-					$elm$core$Maybe$Just(
-						A2(
-							$rtfeldman$elm_css$Html$Styled$span,
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$Attributes$css(
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Css$color(colorTheme.b9),
-											$rtfeldman$elm_css$Css$fontStyle($rtfeldman$elm_css$Css$italic)
-										]))
-								]),
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text(
-									$elm$core$String$fromInt(idx))
-								]))),
-					child);
-			});
 		var childrenWrapper = function (children) {
 			return A2(
 				$rtfeldman$elm_css$Html$Styled$div,
@@ -12812,113 +13305,124 @@ var $author$project$Expandable$viewValue = F4(
 								$rtfeldman$elm_css$Css$borderLeft3,
 								$rtfeldman$elm_css$Css$px(1),
 								$rtfeldman$elm_css$Css$solid,
-								colorTheme.cW)
+								colorTheme.dk)
 							]))
 					]),
 				children);
 		};
-		switch (value.$) {
-			case 11:
-				var children = value.b;
-				return childrenWrapper(
-					A2($elm$core$List$indexedMap, toggableDivWrapper, children));
-			case 10:
-				var children = value.c;
-				return childrenWrapper(
-					A2($elm$core$List$indexedMap, toggableDivWrapper, children));
-			case 12:
-				var recordValues = value.b;
-				return childrenWrapper(
-					A2(
-						$elm$core$List$indexedMap,
-						F2(
-							function (idx, _v1) {
-								var key = _v1.a;
-								var child = _v1.b;
-								return A5(
-									$author$project$Expandable$valueHeader,
-									colorTheme,
-									toggleMsg,
-									toggleKey(idx),
-									$elm$core$Maybe$Just(
-										A2(
-											$rtfeldman$elm_css$Html$Styled$span,
-											_List_fromArray(
-												[
-													$rtfeldman$elm_css$Html$Styled$Attributes$css(
-													_List_fromArray(
-														[
-															$rtfeldman$elm_css$Css$color(colorTheme.b9),
-															$rtfeldman$elm_css$Css$fontStyle($rtfeldman$elm_css$Css$italic)
-														]))
-												]),
-											_List_fromArray(
-												[
-													$rtfeldman$elm_css$Html$Styled$text(key)
-												]))),
-									child);
-							}),
-						recordValues));
-			case 14:
-				var dictValues = value.b;
-				return childrenWrapper(
-					A2(
-						$elm$core$List$indexedMap,
-						F2(
-							function (idx, _v2) {
-								var key = _v2.a;
-								var dictValue = _v2.b;
-								return A5(
-									$author$project$Expandable$valueHeader,
-									colorTheme,
-									toggleMsg,
-									toggleKey(idx),
-									$elm$core$Maybe$Just(
-										A2($author$project$Expandable$viewValueHeader, colorTheme, key)),
-									dictValue);
-							}),
-						dictValues));
-			case 13:
-				var name = value.b;
-				var values = value.c;
-				if (!values.b) {
-					return A2(
-						$rtfeldman$elm_css$Html$Styled$span,
-						_List_fromArray(
-							[
-								$rtfeldman$elm_css$Html$Styled$Attributes$css(
-								_List_fromArray(
-									[
-										$rtfeldman$elm_css$Css$color(colorTheme.by)
-									]))
-							]),
-						_List_fromArray(
-							[
-								$rtfeldman$elm_css$Html$Styled$text(name)
-							]));
-				} else {
-					var children = values;
+		if (value.$ === 1) {
+			var expandableValue = value.b;
+			switch (expandableValue.$) {
+				case 0:
+					var children = expandableValue.b;
 					return childrenWrapper(
-						A2(
-							$elm$core$List$indexedMap,
+						A3(
+							$kraklin$elm_debug_parser$DebugParser$Path$mapValuesWithPath,
+							parentPath,
 							F2(
-								function (idx, child) {
-									return A5(
-										$author$project$Expandable$valueHeader,
-										colorTheme,
-										toggleMsg,
-										toggleKey(idx),
-										$elm$core$Maybe$Nothing,
+								function (path, child) {
+									return A3(
+										header,
+										path,
+										$elm$core$Maybe$Just(
+											A2(
+												$author$project$Expandable$viewKey,
+												colorTheme,
+												$elm$core$String$fromInt(
+													$kraklin$elm_debug_parser$DebugParser$Path$indexFromPath(path)))),
 										child);
 								}),
 							children));
-				}
-			default:
-				return A2($author$project$Expandable$viewValueHeader, colorTheme, value);
+				case 2:
+					var recordValues = expandableValue.a;
+					return childrenWrapper(
+						A3(
+							$kraklin$elm_debug_parser$DebugParser$Path$mapValuesWithPath,
+							parentPath,
+							F2(
+								function (path, _v2) {
+									var key = _v2.a;
+									var child = _v2.b;
+									return A3(
+										header,
+										path,
+										$elm$core$Maybe$Just(
+											A2($author$project$Expandable$viewKey, colorTheme, key)),
+										child);
+								}),
+							recordValues));
+				case 3:
+					var dictValues = expandableValue.a;
+					return childrenWrapper(
+						A3(
+							$kraklin$elm_debug_parser$DebugParser$Path$mapValuesWithPath,
+							parentPath,
+							F2(
+								function (path, _v3) {
+									var key = _v3.a;
+									var dictValue = _v3.b;
+									return A3(
+										header,
+										path,
+										$elm$core$Maybe$Just(
+											A2($author$project$Expandable$viewValueHeader, colorTheme, key)),
+										dictValue);
+								}),
+							dictValues));
+				default:
+					var name = expandableValue.a;
+					var values = expandableValue.b;
+					if (!values.b) {
+						return A2(
+							$rtfeldman$elm_css$Html$Styled$span,
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Html$Styled$Attributes$css(
+									_List_fromArray(
+										[
+											$rtfeldman$elm_css$Css$color(colorTheme.bO)
+										]))
+								]),
+							_List_fromArray(
+								[
+									$rtfeldman$elm_css$Html$Styled$text(name)
+								]));
+					} else {
+						var children = values;
+						return childrenWrapper(
+							A3(
+								$kraklin$elm_debug_parser$DebugParser$Path$mapValuesWithPath,
+								parentPath,
+								F2(
+									function (path, child) {
+										return A3(header, path, $elm$core$Maybe$Nothing, child);
+									}),
+								children));
+					}
+			}
+		} else {
+			return A2($author$project$Expandable$viewValueHeader, colorTheme, value);
 		}
 	});
 var $author$project$Expandable$viewMessageHeader = F6(
 	function (colorTheme, toggleMsg, count, tag, time, value) {
+		var viewTime = A2(
+			$rtfeldman$elm_css$Html$Styled$span,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Css$fontSize(
+							$rtfeldman$elm_css$Css$px(10)),
+							$rtfeldman$elm_css$Css$color(colorTheme.dk),
+							$rtfeldman$elm_css$Css$textAlign($rtfeldman$elm_css$Css$right)
+						]))
+				]),
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$text(time)
+				]));
 		var viewCount = (count > 1) ? A2(
 			$rtfeldman$elm_css$Html$Styled$span,
 			_List_fromArray(
@@ -12929,7 +13433,7 @@ var $author$project$Expandable$viewMessageHeader = F6(
 							$rtfeldman$elm_css$Css$display($rtfeldman$elm_css$Css$inlineBlock),
 							$rtfeldman$elm_css$Css$color(
 							$rtfeldman$elm_css$Css$hex('ffffff')),
-							$rtfeldman$elm_css$Css$backgroundColor(colorTheme.fA),
+							$rtfeldman$elm_css$Css$backgroundColor(colorTheme.gc),
 							$rtfeldman$elm_css$Css$textAlign($rtfeldman$elm_css$Css$center),
 							$rtfeldman$elm_css$Css$borderRadius(
 							$rtfeldman$elm_css$Css$px(14)),
@@ -12957,7 +13461,9 @@ var $author$project$Expandable$viewMessageHeader = F6(
 						[
 							$rtfeldman$elm_css$Css$fontFamilies(
 							_List_fromArray(
-								['IBM Plex Mono', 'monospace']))
+								['IBM Plex Mono', 'monospace'])),
+							$rtfeldman$elm_css$Css$fontSize(
+							$rtfeldman$elm_css$Css$px(11))
 						]))
 				]),
 			_List_fromArray(
@@ -12972,7 +13478,7 @@ var $author$project$Expandable$viewMessageHeader = F6(
 									$rtfeldman$elm_css$Css$displayFlex,
 									$rtfeldman$elm_css$Css$alignItems($rtfeldman$elm_css$Css$baseline),
 									$rtfeldman$elm_css$Css$marginBottom(
-									$rtfeldman$elm_css$Css$px(8))
+									$rtfeldman$elm_css$Css$px(4))
 								]))
 						]),
 					_List_fromArray(
@@ -12986,100 +13492,119 @@ var $author$project$Expandable$viewMessageHeader = F6(
 									_List_fromArray(
 										[
 											$rtfeldman$elm_css$Css$flexGrow(
-											$rtfeldman$elm_css$Css$int(1))
+											$rtfeldman$elm_css$Css$int(1)),
+											$rtfeldman$elm_css$Css$fontSize(
+											$rtfeldman$elm_css$Css$px(10))
 										]))
 								]),
 							_List_fromArray(
 								[
 									$rtfeldman$elm_css$Html$Styled$text(tag)
 								])),
-							A2(
-							$rtfeldman$elm_css$Html$Styled$span,
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$Attributes$css(
-									_List_fromArray(
-										[
-											$rtfeldman$elm_css$Css$fontSize(
-											$rtfeldman$elm_css$Css$px(10)),
-											$rtfeldman$elm_css$Css$color(colorTheme.cW),
-											$rtfeldman$elm_css$Css$textAlign($rtfeldman$elm_css$Css$right)
-										]))
-								]),
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Html$Styled$text(time)
-								]))
+							viewTime
 						])),
-					A2(
-					$rtfeldman$elm_css$Html$Styled$div,
-					_List_fromArray(
-						[
-							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$borderRadius(
-									$rtfeldman$elm_css$Css$px(4)),
-									A2(
-									$rtfeldman$elm_css$Css$padding2,
-									$rtfeldman$elm_css$Css$px(8),
-									$rtfeldman$elm_css$Css$px(12)),
-									$rtfeldman$elm_css$Css$backgroundColor(colorTheme.dP)
-								]))
-						]),
-					_List_fromArray(
-						[
-							A5($author$project$Expandable$valueHeader, colorTheme, toggleMsg, _List_Nil, $elm$core$Maybe$Nothing, value)
-						]))
+					A5($author$project$Expandable$valueHeader, colorTheme, toggleMsg, $kraklin$elm_debug_parser$DebugParser$Path$initPath, $elm$core$Maybe$Nothing, value)
 				]));
 	});
 var $author$project$Panel$view = function (model) {
 	var localTime = function (time) {
-		return A2($author$project$Panel$formattedTime, model.bU, time);
+		return A2($author$project$Panel$formattedTime, model.cb, time);
 	};
-	var colors = $author$project$Theme$themeColors(model.b1.cn);
-	var messages = A2(
-		$elm$core$List$filterMap,
-		function (_v0) {
-			var tag = _v0.R;
-			var value = _v0.H;
-			var count = _v0.bx;
-			var key = _v0.c9;
-			var time = _v0.dL;
-			return ($elm$core$String$isEmpty(model.aJ) || A2(
-				$elm$core$String$contains,
-				$elm$core$String$toLower(model.aJ),
-				$elm$core$String$toLower(tag))) ? $elm$core$Maybe$Just(
-				A2(
-					$rtfeldman$elm_css$Html$Styled$div,
+	var colors = $author$project$Theme$themeColors(model.ck.cI);
+	var messages = $elm$core$List$reverse(
+		A2(
+			$elm$core$List$filterMap,
+			function (_v0) {
+				var tag = _v0.O;
+				var value = _v0.E;
+				var count = _v0.bN;
+				var key = _v0.dA;
+				var time = _v0.ee;
+				return ($elm$core$String$isEmpty(model.a_) || A2(
+					$elm$core$String$contains,
+					$elm$core$String$toLower(model.a_),
+					$elm$core$String$toLower(tag))) ? $elm$core$Maybe$Just(
+					A2(
+						$rtfeldman$elm_css$Html$Styled$div,
+						_List_fromArray(
+							[
+								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Css$backgroundColor(colors.dP),
+										$rtfeldman$elm_css$Css$color(colors.de),
+										A2(
+										$rtfeldman$elm_css$Css$padding2,
+										$rtfeldman$elm_css$Css$px(8),
+										$rtfeldman$elm_css$Css$px(12)),
+										$rtfeldman$elm_css$Css$marginBottom(
+										$rtfeldman$elm_css$Css$px(8)),
+										A4(
+										$rtfeldman$elm_css$Css$boxShadow4,
+										$rtfeldman$elm_css$Css$px(0),
+										$rtfeldman$elm_css$Css$px(2),
+										$rtfeldman$elm_css$Css$px(2),
+										A4($rtfeldman$elm_css$Css$rgba, 0, 0, 0, 0.08))
+									]))
+							]),
+						_List_fromArray(
+							[
+								A6(
+								$author$project$Expandable$viewMessageHeader,
+								colors,
+								$author$project$Panel$Toggle(key),
+								count,
+								tag,
+								localTime(time),
+								value)
+							]))) : $elm$core$Maybe$Nothing;
+			},
+			$author$project$DebugMessages$messages(model.fP)));
+	var moreMessages = function () {
+		var moreMessagesCount = $author$project$DebugMessages$holdOnQueueSize(model.fP);
+		return ($author$project$DebugMessages$isHoldOn(model.fP) && (moreMessagesCount > 0)) ? A2(
+			$rtfeldman$elm_css$Html$Styled$div,
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$Attributes$css(
+					_List_fromArray(
+						[
+							$rtfeldman$elm_css$Css$displayFlex,
+							$rtfeldman$elm_css$Css$justifyContent($rtfeldman$elm_css$Css$spaceBetween),
+							$rtfeldman$elm_css$Css$backgroundColor(colors.dP),
+							$rtfeldman$elm_css$Css$color(colors.de),
+							A2(
+							$rtfeldman$elm_css$Css$padding2,
+							$rtfeldman$elm_css$Css$px(8),
+							$rtfeldman$elm_css$Css$px(12)),
+							$rtfeldman$elm_css$Css$marginBottom(
+							$rtfeldman$elm_css$Css$px(8)),
+							A4(
+							$rtfeldman$elm_css$Css$boxShadow4,
+							$rtfeldman$elm_css$Css$px(0),
+							$rtfeldman$elm_css$Css$px(2),
+							$rtfeldman$elm_css$Css$px(2),
+							A4($rtfeldman$elm_css$Css$rgba, 0, 0, 0, 0.08))
+						]))
+				]),
+			_List_fromArray(
+				[
+					$rtfeldman$elm_css$Html$Styled$text(
+					$elm$core$String$fromInt(moreMessagesCount) + ' more messages'),
+					A2(
+					$rtfeldman$elm_css$Html$Styled$button,
 					_List_fromArray(
 						[
 							$rtfeldman$elm_css$Html$Styled$Attributes$css(
-							_List_fromArray(
-								[
-									$rtfeldman$elm_css$Css$marginBottom(
-									$rtfeldman$elm_css$Css$px(12)),
-									$rtfeldman$elm_css$Css$backgroundColor(colors.fx),
-									$rtfeldman$elm_css$Css$color(colors.eS),
-									A2(
-									$rtfeldman$elm_css$Css$padding2,
-									$rtfeldman$elm_css$Css$px(8),
-									$rtfeldman$elm_css$Css$px(12))
-								]))
+							$author$project$Panel$buttonStyles(colors)),
+							$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Panel$ShowMoreMessages)
 						]),
 					_List_fromArray(
 						[
-							A6(
-							$author$project$Expandable$viewMessageHeader,
-							colors,
-							$author$project$Panel$Toggle(key),
-							count,
-							tag,
-							localTime(time),
-							value)
-						]))) : $elm$core$Maybe$Nothing;
-		},
-		$author$project$DebugMessages$messages(model.fc));
+							$rtfeldman$elm_css$Html$Styled$text('Show More Messages')
+						]))
+				])) : $rtfeldman$elm_css$Html$Styled$text('');
+	}();
 	return A4(
 		$rtfeldman$elm_css$Html$Styled$styled,
 		$rtfeldman$elm_css$Html$Styled$div,
@@ -13088,9 +13613,7 @@ var $author$project$Panel$view = function (model) {
 				$rtfeldman$elm_css$Css$fontSize(
 				$rtfeldman$elm_css$Css$px(12)),
 				$rtfeldman$elm_css$Css$fontFamily($rtfeldman$elm_css$Css$monospace),
-				$rtfeldman$elm_css$Css$backgroundColor(colors.cx),
-				$rtfeldman$elm_css$Css$flexGrow(
-				$rtfeldman$elm_css$Css$int(1)),
+				$rtfeldman$elm_css$Css$backgroundColor(colors.cU),
 				$rtfeldman$elm_css$Css$displayFlex,
 				$rtfeldman$elm_css$Css$flexDirection($rtfeldman$elm_css$Css$column),
 				$rtfeldman$elm_css$Css$position($rtfeldman$elm_css$Css$absolute),
@@ -13114,41 +13637,47 @@ var $author$project$Panel$view = function (model) {
 						_List_fromArray(
 							[
 								$rtfeldman$elm_css$Css$displayFlex,
-								$rtfeldman$elm_css$Css$backgroundColor(colors.cx),
+								$rtfeldman$elm_css$Css$backgroundColor(colors.cU),
 								A2(
 								$rtfeldman$elm_css$Css$padding2,
 								$rtfeldman$elm_css$Css$px(4),
 								$rtfeldman$elm_css$Css$px(8)),
 								$rtfeldman$elm_css$Css$width(
-								$rtfeldman$elm_css$Css$pct(100))
+								$rtfeldman$elm_css$Css$pct(100)),
+								$rtfeldman$elm_css$Css$justifyContent($rtfeldman$elm_css$Css$spaceBetween)
 							]))
 					]),
 				_List_fromArray(
 					[
 						A2(
-						$rtfeldman$elm_css$Html$Styled$button,
+						$rtfeldman$elm_css$Html$Styled$div,
+						_List_Nil,
 						_List_fromArray(
 							[
-								$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Panel$Clear),
-								$rtfeldman$elm_css$Html$Styled$Attributes$css(
+								A2(
+								$rtfeldman$elm_css$Html$Styled$button,
 								_List_fromArray(
 									[
-										$rtfeldman$elm_css$Css$backgroundColor(colors.er),
-										$rtfeldman$elm_css$Css$color(colors.es),
-										A2(
-										$rtfeldman$elm_css$Css$padding2,
-										$rtfeldman$elm_css$Css$px(4),
-										$rtfeldman$elm_css$Css$px(8)),
-										$rtfeldman$elm_css$Css$hover(
-										_List_fromArray(
-											[
-												$rtfeldman$elm_css$Css$backgroundColor(colors.fA)
-											]))
+										$rtfeldman$elm_css$Html$Styled$Attributes$css(
+										$author$project$Panel$buttonStyles(colors)),
+										$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Panel$Clear)
+									]),
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$text('Clear all')
+									])),
+								A2(
+								$rtfeldman$elm_css$Html$Styled$button,
+								_List_fromArray(
+									[
+										$rtfeldman$elm_css$Html$Styled$Attributes$css(
+										$author$project$Panel$buttonStyles(colors)),
+										$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Panel$TogglePaused)
+									]),
+								_List_fromArray(
+									[
+										model.Y ? $rtfeldman$elm_css$Html$Styled$text('Pause') : $rtfeldman$elm_css$Html$Styled$text('Resume')
 									]))
-							]),
-						_List_fromArray(
-							[
-								$rtfeldman$elm_css$Html$Styled$text('Clear all')
 							])),
 						A2(
 						$rtfeldman$elm_css$Html$Styled$input,
@@ -13163,15 +13692,33 @@ var $author$project$Panel$view = function (model) {
 										$rtfeldman$elm_css$Css$px(8))
 									])),
 								$rtfeldman$elm_css$Html$Styled$Events$onInput($author$project$Panel$FilterChanged),
-								$rtfeldman$elm_css$Html$Styled$Attributes$value(model.aJ),
-								$rtfeldman$elm_css$Html$Styled$Attributes$placeholder('Filter')
+								$rtfeldman$elm_css$Html$Styled$Attributes$value(model.a_),
+								$rtfeldman$elm_css$Html$Styled$Attributes$placeholder('Filter tags')
 							]),
 						_List_Nil)
 					])),
-				A2(
-				$rtfeldman$elm_css$Html$Styled$div,
+				A3(
+				$rtfeldman$elm_css$Html$Styled$node,
+				'x-autoscroll-div',
 				_List_fromArray(
 					[
+						$rtfeldman$elm_css$Html$Styled$Attributes$id($author$project$Panel$messagesDivId),
+						A2(
+						$rtfeldman$elm_css$Html$Styled$Attributes$attribute,
+						'autoscroll',
+						A2(
+							$elm$json$Json$Encode$encode,
+							0,
+							$elm$json$Json$Encode$bool(model.Y))),
+						A2(
+						$rtfeldman$elm_css$Html$Styled$Events$on,
+						'x-autoscroll-stopped',
+						A2(
+							$elm$json$Json$Decode$andThen,
+							function (msg) {
+								return model.Y ? $elm$json$Json$Decode$succeed(msg) : $elm$json$Json$Decode$fail('Autoscrolled already stopped');
+							},
+							$elm$json$Json$Decode$succeed($author$project$Panel$AutoscrollStopped))),
 						$rtfeldman$elm_css$Html$Styled$Attributes$css(
 						_List_fromArray(
 							[
@@ -13182,10 +13729,11 @@ var $author$project$Panel$view = function (model) {
 								$rtfeldman$elm_css$Css$overflow($rtfeldman$elm_css$Css$auto)
 							]))
 					]),
-				messages)
+				messages),
+				moreMessages
 			]));
 };
-var $rtfeldman$elm_css$Css$bolder = {ad: 0, H: 'bolder'};
+var $rtfeldman$elm_css$Css$bolder = {ap: 0, E: 'bolder'};
 var $rtfeldman$elm_css$Css$marginTop = $rtfeldman$elm_css$Css$prop1('margin-top');
 var $rtfeldman$elm_css$Css$maxWidth = $rtfeldman$elm_css$Css$prop1('max-width');
 var $author$project$Main$viewError = function (lastError) {
@@ -13239,10 +13787,10 @@ var $author$project$Main$viewError = function (lastError) {
 		return $rtfeldman$elm_css$Html$Styled$text('');
 	}
 };
-var $rtfeldman$elm_css$Css$wrap = {a4: 0, bA: 0, H: 'wrap'};
+var $rtfeldman$elm_css$Css$wrap = {bq: 0, bR: 0, E: 'wrap'};
 var $author$project$Main$view = function (model) {
 	return {
-		eg: _List_fromArray(
+		eP: _List_fromArray(
 			[
 				$rtfeldman$elm_css$Html$Styled$toUnstyled(
 				A4(
@@ -13366,7 +13914,7 @@ var $author$project$Main$view = function (model) {
 														])),
 													$rtfeldman$elm_css$Html$Styled$Events$onInput($author$project$Main$InputChanged),
 													$rtfeldman$elm_css$Html$Styled$Attributes$placeholder('Paste debug.log message here...'),
-													$rtfeldman$elm_css$Html$Styled$Attributes$value(model.ar)
+													$rtfeldman$elm_css$Html$Styled$Attributes$value(model.aF)
 												]),
 											_List_Nil),
 											A2(
@@ -13419,6 +13967,34 @@ var $author$project$Main$view = function (model) {
 																[
 																	A2($rtfeldman$elm_css$Css$padding2, $author$project$Main$tinyGap, $author$project$Main$smallGap),
 																	$rtfeldman$elm_css$Css$cursor($rtfeldman$elm_css$Css$pointer),
+																	$rtfeldman$elm_css$Css$color(
+																	$rtfeldman$elm_css$Css$hex('035388')),
+																	$rtfeldman$elm_css$Css$backgroundColor($rtfeldman$elm_css$Css$inherit),
+																	$rtfeldman$elm_css$Css$fontWeight($rtfeldman$elm_css$Css$bold),
+																	$rtfeldman$elm_css$Css$borderWidth(
+																	$rtfeldman$elm_css$Css$px(0)),
+																	$rtfeldman$elm_css$Css$hover(
+																	_List_fromArray(
+																		[
+																			$rtfeldman$elm_css$Css$color(
+																			$rtfeldman$elm_css$Css$hex('1992D4'))
+																		]))
+																])),
+															$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Main$GenerateMultipleMessages)
+														]),
+													_List_fromArray(
+														[
+															$rtfeldman$elm_css$Html$Styled$text('Generate 10 messages')
+														])),
+													A2(
+													$rtfeldman$elm_css$Html$Styled$button,
+													_List_fromArray(
+														[
+															$rtfeldman$elm_css$Html$Styled$Attributes$css(
+															_List_fromArray(
+																[
+																	A2($rtfeldman$elm_css$Css$padding2, $author$project$Main$tinyGap, $author$project$Main$smallGap),
+																	$rtfeldman$elm_css$Css$cursor($rtfeldman$elm_css$Css$pointer),
 																	$rtfeldman$elm_css$Css$width(
 																	$rtfeldman$elm_css$Css$px(200)),
 																	$rtfeldman$elm_css$Css$alignSelf($rtfeldman$elm_css$Css$flexEnd),
@@ -13453,14 +14029,14 @@ var $author$project$Main$view = function (model) {
 																])),
 															$rtfeldman$elm_css$Html$Styled$Events$onClick($author$project$Main$ParseButtonClicked),
 															$rtfeldman$elm_css$Html$Styled$Attributes$disabled(
-															$elm$core$String$isEmpty(model.ar))
+															$elm$core$String$isEmpty(model.aF))
 														]),
 													_List_fromArray(
 														[
 															$rtfeldman$elm_css$Html$Styled$text('Parse debug.log')
 														]))
 												])),
-											$author$project$Main$viewError(model.a6)
+											$author$project$Main$viewError(model.bs)
 										])),
 									A2(
 									$rtfeldman$elm_css$Html$Styled$div,
@@ -13481,14 +14057,14 @@ var $author$project$Main$view = function (model) {
 											A2(
 											$rtfeldman$elm_css$Html$Styled$map,
 											$author$project$Main$PanelMsg,
-											$author$project$Panel$view(model.av))
+											$author$project$Panel$view(model.aJ))
 										]))
 								]))
 						])))
 			]),
-		gc: 'Elm Debug.log parser'
+		gS: 'Elm Debug.log parser'
 	};
 };
 var $author$project$Main$main = $elm$browser$Browser$document(
-	{e0: $author$project$Main$init, fX: $author$project$Main$subscriptions, gh: $author$project$Main$update, gj: $author$project$Main$view});
+	{fA: $author$project$Main$init, gB: $author$project$Main$subscriptions, gY: $author$project$Main$update, g$: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)(0)}});}(this));
