@@ -4,7 +4,7 @@ import Browser
 import Browser.Dom as Dom
 import Css
 import DebugMessages exposing (AddMessageData, DebugMessages)
-import DebugParser.ElmValue exposing (Path)
+import DebugParser.Path exposing (Path)
 import Expandable
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs

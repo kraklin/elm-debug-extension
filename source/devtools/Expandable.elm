@@ -10,10 +10,10 @@ import DebugParser.ElmValue as ElmValue
     exposing
         ( ElmValue(..)
         , ExpandableValue(..)
-        , Path
         , PlainValue(..)
         , SequenceType(..)
         )
+import DebugParser.Path as Path exposing (Path)
 import Html.Events.Extra as Events
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attrs
@@ -167,6 +167,17 @@ type alias ColorTheme a =
     }
 
 
+viewKey : ColorTheme a -> String -> Html msg
+viewKey colorTheme key =
+    Html.span
+        [ Attrs.css
+            [ Css.color colorTheme.keysColor
+            , Css.fontStyle Css.italic
+            ]
+        ]
+        [ Html.text key ]
+
+
 viewMessageHeader : ColorTheme a -> (Path -> msg) -> Int -> String -> String -> ElmValue -> Html msg
 viewMessageHeader colorTheme toggleMsg count tag time value =
     let
@@ -222,7 +233,7 @@ viewMessageHeader colorTheme toggleMsg count tag time value =
                 [ Html.text tag ]
             , viewTime
             ]
-        , valueHeader colorTheme toggleMsg [] Nothing value
+        , valueHeader colorTheme toggleMsg Path.initPath Nothing value
         ]
 
 
@@ -283,13 +294,7 @@ viewValueHeaderInner level colorTheme value =
             let
                 keySpan name =
                     Html.span []
-                        [ Html.span
-                            [ Attrs.css
-                                [ Css.color colorTheme.keysColor
-                                , Css.fontStyle Css.italic
-                                ]
-                            ]
-                            [ Html.text name ]
+                        [ viewKey colorTheme name
                         , Html.text ": "
                         ]
             in
@@ -453,11 +458,11 @@ triangle colorTheme isOpened =
 
 
 valueHeader : ColorTheme a -> (Path -> msg) -> Path -> Maybe (Html msg) -> ElmValue -> Html msg
-valueHeader colorTheme toggleMsg toggleKey maybeKey value =
+valueHeader colorTheme toggleMsg togglePath maybeKey value =
     let
         viewValueContent =
             if isValueExpanded value then
-                Html.div [] [ viewValue colorTheme toggleMsg toggleKey value ]
+                Html.div [] [ viewValue colorTheme toggleMsg togglePath value ]
 
             else
                 Html.text ""
@@ -480,7 +485,7 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
     if ElmValue.hasNestedValues value then
         Html.div [] <|
             [ Html.span
-                [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg toggleKey
+                [ Attrs.fromUnstyled <| Events.onClickStopPropagation <| toggleMsg togglePath
                 , Attrs.css
                     [ Css.cursor Css.pointer
                     , Css.hover [ Css.backgroundColor <| colorTheme.valueBackgroundColor, Css.textDecoration Css.underline ]
@@ -495,13 +500,10 @@ valueHeader colorTheme toggleMsg toggleKey maybeKey value =
 
 
 viewValue : ColorTheme a -> (Path -> msg) -> Path -> ElmValue -> Html msg
-viewValue colorTheme toggleMsg parentKey value =
+viewValue colorTheme toggleMsg parentPath value =
     let
-        toggleKey idx =
-            parentKey ++ [ idx ]
-
-        header idx =
-            valueHeader colorTheme toggleMsg (toggleKey idx)
+        header path =
+            valueHeader colorTheme toggleMsg path
 
         childrenWrapper children =
             Html.div
@@ -512,65 +514,50 @@ viewValue colorTheme toggleMsg parentKey value =
                     ]
                 ]
                 children
-
-        toggableDivWrapper idx child =
-            header idx
-                (Just <|
-                    Html.span
-                        [ Attrs.css
-                            [ Css.color colorTheme.keysColor
-                            , Css.fontStyle Css.italic
-                            ]
-                        ]
-                        [ Html.text <| String.fromInt idx ]
-                )
-                child
     in
     case value of
-        Expandable _ (ElmSequence _ children) ->
-            children
-                |> List.indexedMap toggableDivWrapper
-                |> childrenWrapper
-
-        Expandable _ (ElmRecord recordValues) ->
-            recordValues
-                |> List.indexedMap
-                    (\idx ( key, child ) ->
-                        header idx
-                            (Just <|
-                                Html.span
-                                    [ Attrs.css
-                                        [ Css.color colorTheme.keysColor
-                                        , Css.fontStyle Css.italic
-                                        ]
-                                    ]
-                                    [ Html.text key ]
-                            )
-                            child
-                    )
-                |> childrenWrapper
-
-        Expandable _ (ElmDict dictValues) ->
-            dictValues
-                |> List.indexedMap
-                    (\idx ( path, dictValue ) ->
-                        header idx
-                            (Just <|
-                                viewValueHeader colorTheme path
-                            )
-                            dictValue
-                    )
-                |> childrenWrapper
-
-        Expandable _ (ElmType name values) ->
-            case values of
-                [] ->
-                    Html.span [ Attrs.css [ Css.color colorTheme.customTypesColor ] ] [ Html.text name ]
-
-                children ->
+        Expandable _ expandableValue ->
+            case expandableValue of
+                ElmSequence _ children ->
                     children
-                        |> List.indexedMap (\idx child -> header idx Nothing child)
+                        |> Path.mapValuesWithPath parentPath
+                            (\path child ->
+                                header path
+                                    (String.fromInt (Path.indexFromPath path)
+                                        |> viewKey colorTheme
+                                        |> Just
+                                    )
+                                    child
+                            )
                         |> childrenWrapper
 
-        _ ->
+                ElmRecord recordValues ->
+                    recordValues
+                        |> Path.mapValuesWithPath parentPath
+                            (\path ( key, child ) ->
+                                header path (Just <| viewKey colorTheme key) child
+                            )
+                        |> childrenWrapper
+
+                ElmDict dictValues ->
+                    dictValues
+                        |> Path.mapValuesWithPath
+                            parentPath
+                            (\path ( key, dictValue ) ->
+                                header path (Just <| viewValueHeader colorTheme key) dictValue
+                            )
+                        |> childrenWrapper
+
+                ElmType name values ->
+                    case values of
+                        [] ->
+                            Html.span [ Attrs.css [ Css.color colorTheme.customTypesColor ] ] [ Html.text name ]
+
+                        children ->
+                            children
+                                |> Path.mapValuesWithPath parentPath
+                                    (\path child -> header path Nothing child)
+                                |> childrenWrapper
+
+        Plain _ ->
             viewValueHeader colorTheme value
