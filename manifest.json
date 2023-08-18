@@ -11,6 +11,11 @@
     "activeTab",
     "storage"
   ],
+  "{{firefox}}.applications": {
+    "gecko": {
+      "id": "{9e6bdd58-4473-c842-9a25-a2248e1365b4}"
+    }
+  },
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "browser_action": {
     "default_popup": "popup/index.html",
