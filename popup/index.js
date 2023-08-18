@@ -4,7 +4,6 @@ import {Elm} from './Popup.elm';
 
 browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
   const currentTab = tabs[0];
-debugger;
   const app = Elm.Popup.init({
     node: document.getElementById('elm-popup'),
     flags: {version: version}
