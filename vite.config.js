@@ -15,6 +15,9 @@ function generateManifest() {
 }
 
 export default defineConfig({
+  build: {
+    minify: false
+  },
   plugins: [
     elmPlugin.plugin(),
     webExtension({
