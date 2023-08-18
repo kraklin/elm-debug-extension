@@ -107,6 +107,7 @@ browser.storage.sync.get([globalStorageKey, storageKey]).then((result) => {
     false
   );
 
+  debugger;
   // handle messages for settings
   browser.runtime.onMessage.addListener((request) => {
     switch (request.action) {

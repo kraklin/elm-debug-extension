@@ -1,0 +1,47 @@
+{
+  "name": "Elm Debug Helper",
+  "manifest_version": 2,
+  "icons": {
+    "16": "icon/favicon-dark-16.png",
+    "32": "icon/favicon-dark-32.png",
+    "96": "icon/favicon-dark-96.png",
+    "128": "icon/favicon-dark-128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "browser_action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icon/favicon-dark-16.png",
+      "32": "icon/favicon-dark-32.png",
+      "96": "icon/favicon-dark-96.png",
+      "128": "icon/favicon-dark-128.png"
+    },
+    "default_title": "Elm Debug Helper"
+  },
+  "{{chrome}}.options_page": "options/index.html",
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true,
+    "{{chrome}}.chrome_style": false
+  },
+  "background": {
+    "{{chrome}}.service_worker": "scripts/background.js",
+    "{{firefox}}.scripts": [
+      "scripts/background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "scripts/contentScript.js"
+      ]
+    }
+  ]
+}

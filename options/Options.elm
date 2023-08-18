@@ -240,13 +240,19 @@ header version =
         ]
         [ Element.image
             [ Element.width <| Element.px 24 ]
-            { description = "Elm Debug Extension Logo", src = "/assets/elm-logo.png" }
+            { description = "Elm Debug Extension Logo", src = "/elm-logo.png" }
         , Element.el
             [ Font.size 20
             , Font.medium
             , Font.color dark
             ]
             (Element.text <| String.toUpper "Elm Debug Extension")
+        , Element.el
+            [ Font.size 14
+            , Font.medium
+            , Font.color dark
+            ]
+            (Element.text <| version)
         , Element.el
             [ Font.size 20
             , Font.regular
@@ -497,7 +503,7 @@ view model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     globalsSavedResult GlobalsSavedResult
 
 

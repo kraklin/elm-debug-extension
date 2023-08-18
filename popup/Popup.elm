@@ -1,13 +1,13 @@
 port module Popup exposing (..)
 
 import Browser
-import Css exposing (int, pct, px)
+import Css exposing (int, px)
 import Css.Transitions as Transitions
 import Html exposing (Html)
 import Html.Styled as HtmlStyled exposing (Html)
 import Html.Styled.Attributes as Attrs exposing (css, src)
 import Html.Styled.Events as Events
-import Svg exposing (Svg)
+import Svg
 import Svg.Attributes as SvgAttrs
 
 
@@ -151,7 +151,7 @@ header =
                 [ Css.width (px 24)
                 , Css.height (px 24)
                 ]
-            , src "/assets/elm-logo.png"
+            , src "/elm-logo.png"
             ]
             []
         , HtmlStyled.div
@@ -323,7 +323,7 @@ view model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     receive UpdateOptions
 
 

@@ -2,16 +2,16 @@ import browser from 'webextension-polyfill';
 
 const setIcon = (tabId, isActive) => {
   const onIconPath = {
-    "16": "assets/icons/favicon-16.png",
-    "32": "assets/icons/favicon-32.png",
-    "96": "assets/icons/favicon-96.png",
-    "128": "assets/icons/favicon-128.png"
+    "16": "icon/favicon-16.png",
+    "32": "icon/favicon-32.png",
+    "96": "icon/favicon-96.png",
+    "128": "icon/favicon-128.png"
   };
   const offIconPath = {
-    "16": "assets/icons/favicon-dark-16.png",
-    "32": "assets/icons/favicon-dark-32.png",
-    "96": "assets/icons/favicon-dark-96.png",
-    "128": "assets/icons/favicon-dark-128.png"
+    "16": "icon/favicon-dark-16.png",
+    "32": "icon/favicon-dark-32.png",
+    "96": "icon/favicon-dark-96.png",
+    "128": "icon/favicon-dark-128.png"
   };
 
   let newPath = offIconPath;
