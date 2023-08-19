@@ -1,14 +1,12 @@
 import browser from 'webextension-polyfill';
 import {version} from '../package.json'
 import {Elm} from './Options.elm';
-import {isChromeBased} from '../scripts/helpers.js'
 
 //TODO: make some globals import to co-locate all these constants
 const globalStorageKey = "globalOptions";
 
 browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
   const currentTab = tabs[0];
-  const hasCustomFormatters = isChromeBased()
 
   browser.storage.sync.get([globalStorageKey]).then((storedOptions) => {
     const storedGlobals = storedOptions.globalOptions;
@@ -19,7 +17,7 @@ browser.tabs.query({active: true, currentWindow: true}).then((tabs) => {
       node: document.getElementById('elm-options'),
       flags: {
         version: version,
-        hasCustomFormatters: hasCustomFormatters,
+        hasCustomFormatters: true,
         initialOptions: initialOptions
       }
     });
