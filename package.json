@@ -16,7 +16,7 @@
     "build": "vite build"
   },
   "devDependencies": {
-    "elm-debug-transformer": "1.1.1",
+    "elm-debug-transformer": "1.2.1",
     "elm-tooling": "^1.14.0",
     "sass": "^1.66.0",
     "vite": "^4.4.9",
