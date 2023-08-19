@@ -13,7 +13,8 @@
   "scripts": {
     "postinstall": "elm-tooling install",
     "dev": "vite",
-    "build": "vite build"
+    "build:chrome": "TARGET=chrome vite build",
+    "build:firefox": "TARGET=firefox vite build"
   },
   "devDependencies": {
     "elm-debug-transformer": "1.2.1",
@@ -22,6 +23,7 @@
     "vite": "^4.4.9",
     "vite-plugin-elm": "^2.8.0",
     "vite-plugin-web-extension": "^3.2.0",
+    "vite-plugin-zip-pack": "^1.0.6",
     "webextension-polyfill": "^0.10.0"
   }
 }
